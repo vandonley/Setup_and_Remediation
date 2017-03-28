@@ -10,15 +10,15 @@ $PhyCores = $c_logical
 $PhyMemory = Get-WmiObject -Class Win32_PhysicalMemory | Measure-Object -Property capacity -Sum `
     | Foreach {"{0:N2}" -f ([Math]::round(($_.Sum / 1MB),2))}
 
-$MinMemory = $PhyMemory/4
-$MaxMemory = $PhyMemory/2
+$MinMemory = ($PhyMemory/4)*1MB
+$MaxMemory = ($PhyMemory/2)*1MB
 
-$RunningVM = Get-VM | Where-Object {$_.PowerState -eq "PoweredOn"}
+$RunningVM = Get-VM | Where-Object {$_.State -eq "Running"}
 
 $RunningVM | Stop-VM -Force
 
-Get-VM | Set-VM -ProcessorCount $PhyCores -DynamicMemory -MemoryMaximumBytes [String]$MaxMemory + "MB" `
-    -MemoryStartupBytes [String]$MinMemory + "MB"
+Get-VM | Set-VM -ProcessorCount $PhyCores -DynamicMemory -MemoryMaximumBytes $MaxMemory `
+    -MemoryStartupBytes $MinMemory
 
 $RunningVM | Start-VM
 }
