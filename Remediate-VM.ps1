@@ -3,7 +3,7 @@
 Reconfigure VM's to improve performance.
 Parsec Computer Corp.
 Created:  Van Donley - 03/25/2017
-Last Updated:  Van Donely - 04/03/2017
+Last Updated:  Van Donely - 04/04/2017
 --------------------------
 #>
 
@@ -44,8 +44,6 @@ $MaxTest = ([system.math]::Round(($VMCount/2), 0))
 
 $MinMemory = ([system.math]::Round((($PhyMemory/$MinDiv)/2), 0))*2MB
 $MaxMemory = ([system.math]::Round((($PhyMemory/$MaxDiv)/2), 0))*2MB
-$Return.StartingMemory = $MinMemory
-$Return.MaximumMemory = $MaxMemory
 
 # Shut down all running VM's
 
