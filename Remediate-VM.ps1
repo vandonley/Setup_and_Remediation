@@ -21,22 +21,18 @@ $cpu = @(Get-WmiObject -Class Win32_processor -ea stop)
                     $c_logical = $cpu[0].NumberOfLogicalProcessors * $c_socket
 
 $PhyCores = $c_logical
-$Return.PhysicalCores = $PhyCores
 
 # Get a total of the physical memory of the host in megabytes
 
 $PhyMemory = Get-WmiObject -Class Win32_PhysicalMemory | Measure-Object -Property capacity -Sum `
     | Foreach {"{0:N2}" -f ([Math]::round(($_.Sum / 1MB),2))}
-$Return.PhysicalMemory = $PhyMemory
 
 # Get a list of the VM's currently running on the host 
 
 $RunningVM = Get-VM | Where-Object {$_.State -eq "Running"}
-$Return.StartingVMRunning = $RunningVM
 
-$VMCount = $RunningVM.Count
 
-# Get the ammount of memory to assign to each VM
+# Get the ammount of memory to assign to each VM, must be a multiple of 2MB
 
 $MinTest = $VMCount*2
     if( $MinTest -le '8' ) { $MinDiv = $VMCount + 2 }
@@ -67,9 +63,15 @@ $RunningVM | Start-VM
 # Check which VM's are running when we are all done
 
 $EndRunningVM = Get-VM | Where-Object {$_.State -eq "Running"}
-$Return.EndingVMRunning = $EndRunningVM
 
 # Output everything we have been keeping track of
+
+$Return.StartingMemory = $MinMemory*1MB
+$Return.MaximumMemory = $MaxMemory*1MB
+$Return.PhysicalMemory = $PhyMemory*1MB
+$Return.PhysicalCores = $PhyCores
+$Return.EndingVMCount = $EndRunningVM.count
+$Return.StartingVMCount = $RunningVM.count
 
 return $Return
 
