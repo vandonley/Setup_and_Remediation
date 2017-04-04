@@ -38,16 +38,16 @@ $VMCount = $RunningVM.Count
 
 # Get the ammount of memory to assign to each VM
 
-$MinTest = $VMCount*1.5
-    if( $MinTest -le '2' ) { $MinDiv = 2 }
+$MinTest = $VMCount*2
+    if( $MinTest -le '8' ) { $MinDiv = $VMCount + 2 }
     else { $MinDiv = $MinTest }
 
-$MaxTest = $VMCount/2
+$MaxTest = ([system.math]::Round(($VMCount/2), 0))
     if($MaxTest -le '1') { $MaxDiv = .75 }
     else { $MaxDiv = $MaxTest }
 
-$MinMemory = ( $PhyMemory/$MinDiv )*1MB
-$MaxMemory = ( $PhyMemory/$MaxDiv )*1MB
+$MinMemory = ([system.math]::Round((($PhyMemory/$MinDiv)/2), 0))*2MB
+$MaxMemory = ([system.math]::Round((($PhyMemory/$MaxDiv)/2), 0))*2MB
 $Return.StartingMemory = $MinMemory
 $Return.MaximumMemory = $MaxMemory
 
