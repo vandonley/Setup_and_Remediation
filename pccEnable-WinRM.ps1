@@ -25,14 +25,15 @@ $PSExePolicy = Get-ExecutionPolicy
         if ( $WinRMService.Status -ne 'Running' )
             {
             $Return.RMServiceStatusBegin = $WinRMService.Status
-            Enable-PSRemoting -Force -SkipNetworkProfileCheck -ErrorAction Continue
+            $Return.EnableWinRMOut = Enable-PSRemoting -Force -SkipNetworkProfileCheck `
+                -ErrorAction Continue -WarningAction Continue
             $Return.RMServiceStatus = (Get-Service winrm).Status
             }
 
             else { $Return.RMServiceStatus = $WinRMService.Status }
         }
 
-    catch [EXCEPTION] { $Return.RMServiceError = $_.ExceptionMessage }
+    catch [EXCEPTION] { $_.Exception | Format-List -Force }
 
 # Check to see if the Powershell execution policy is set to unrestricted and change if needed.
 
@@ -40,35 +41,29 @@ $PSExePolicy = Get-ExecutionPolicy
         if ( $PSExePolicy -ne 'Unrestricted' )
             {
             $Return.PSExePolicyBegin = $PSExePolicy
-            Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force -ErrorAction Continue
+            $Return.PSExePolicyOut = Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force `
+                -ErrorAction Continue -WarningAction Continue
             $Return.PSExePolicy = Get-ExecutionPolicy
             }
 
             else { $Return.PSExePolicy = $PSExePolicy }
         }
 
-    catch [EXCEPTION] { $Return.PSExePolicyError = $_.ExceptionMessage }
+    catch [EXCEPTION] { $_.Exception | Format-List -Force }
 
 # Return results from function. Exit with error if not in correct state.
 
     if ( $Return.RMServiceStatus -ne 'Running' -or $Return.PSExePolicy -ne 'Unrestricted' )
         {
-        $RMServiceStatus = (Get-Service winrm).Status
-        $PSExePolicy = Get-ExecutionPolicy
         $Error.Clear()
         [string]$ErrorString = "Check Failure"
-        $ErrMessage = @"
-
-WinRM Service Status:  $RMServiceStatus
-Powershell Execution Policy:  $PSExePolicy  
-
-"@
+        [string]$ErrMessage = ( $Return | Format-List | Out-String )
         $Error.Add($ErrorString)
-        Write-Error -Exception ($ErrorString) -ErrorId 1001 -Message $ErrMessage -ErrorAction Continue
+        Write-Error -Exception ($ErrorString) -ErrorId 1001 -Message $ErrMessage -ErrorAction
         Exit 1001
         }
         
-    $Return
+Return ( $Return | Format-List )
 
 }
 
