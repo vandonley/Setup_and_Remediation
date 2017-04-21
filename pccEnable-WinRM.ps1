@@ -59,7 +59,7 @@ $PSExePolicy = Get-ExecutionPolicy
         [string]$ErrorString = "Check Failure"
         [string]$ErrMessage = ( $Return | Format-List | Out-String )
         $Error.Add($ErrorString)
-        Write-Error -Exception ($ErrorString) -ErrorId 1001 -Message $ErrMessage -ErrorAction
+        Write-Error -Exception $ErrorString -ErrorId 1001 -Message $ErrMessage -ErrorAction
         Exit 1001
         }
         
