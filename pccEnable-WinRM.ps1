@@ -3,7 +3,7 @@
 Check if Remote Management is enabled.
 Parsec Computer Corp.
 Created:  Van Donley - 04/18/2017
-Last Updated:  Van Donely - 04/18/2017
+Last Updated:  Van Donely - 04/21/2017
 --------------------------
 #>
 
@@ -59,7 +59,7 @@ $PSExePolicy = Get-ExecutionPolicy
         [string]$ErrorString = "Check Failure"
         [string]$ErrMessage = ( $Return | Format-List | Out-String )
         $Error.Add($ErrorString)
-        Write-Error -Exception $ErrorString -ErrorId 1001 -Message $ErrMessage -ErrorAction
+        Write-Error -Exception $ErrorString -ErrorId 1001 -Message $ErrMessage
         Exit 1001
         }
         
