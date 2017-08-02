@@ -71,7 +71,7 @@ $Return.PhysicalCores = $PhyCores
 $Return.EndingVMCount = $EndRunningVM.count
 $Return.StartingVMCount = $RunningVM.count
 
-return $Return
+return ($Return | Format-List | Out-String)
 
 }
 
