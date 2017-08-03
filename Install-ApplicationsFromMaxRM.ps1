@@ -213,6 +213,16 @@ WARNING: Software installation will NOT happen until next run!
 "@
 	Restart-MAXfocusService
 	$ErrorCount = $ErrorCount + 1
+	Add-Content -Path $ErrorFile -Value "`n----------------------`n "
+	Add-Content -Path $ErrorFile -Value (get-date) -passthru
+	Add-Content -Path $ErrorFile -Value "`n "
+	Add-Content -Path $ErrorFile -Value ( $Return | Format-List | Out-String )
+    $Error.Clear() | Out-Null
+    [string]$ErrorString = "Check Failure"
+    [string]$ErrMessage = ( $Return | Format-List | Out-String )
+    $Error.Add($ErrorString)
+    Write-Error -Exception $ErrorString -ErrorId 1001 -Message $ErrMessage
+	Exit 1001
 }
 
 #EndRegion
@@ -310,14 +320,14 @@ Foreach ($Package in $Packages) {
 
 Write-Host 'Updating All'
 Try {
-	. $choco upgrade all -yr --no-progress
+	$Return.CUP = . $choco upgrade all -yr --no-progress
 } Catch {
-	$Return.Update_Error = $_.Exception | Format-List | Out-String
+	$Return.CUP_Error = $_.Exception | Format-List | Out-String
 }
 	Write-Host ('Installing packages {0}' -f $InstallPackages)
 If ($InstallPackages.Count -gt 0) {	
 	Try {
-		. $choco install -yr --no-progress @InstallPackages
+		$Return.cint = . $choco install -yr --no-progress @InstallPackages
 	} Catch {
 		$Return.Package_Install_Error = $_.Exception | Format-List | Out-String
 		$ErrorCount = $ErrorCount + 1
