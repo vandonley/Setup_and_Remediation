@@ -83,7 +83,7 @@ try {
     $CarbonInstall = Get-InstalledModule | Where-Object Name -EQ Carbon
         if (! $CarbonInstall) {
             Write-Host 'Carbon module not installed - Fixing'
-            $Return.CarbonInstall = Find-Module -Name Carbon | Install-Module -Force -Verbose 4>&1
+            $Return.CarbonInstall = Find-Module -Name Carbon | Install-Module -AllowClobber -Force -Verbose 4>&1
         }
     else {
         $Return.CarbonInstall = $CarbonInstall  | Select-Object Name,Version
