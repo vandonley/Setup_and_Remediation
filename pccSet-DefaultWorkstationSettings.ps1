@@ -94,7 +94,9 @@ try {
         (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
                 if (Assert-FirewallConfigurable) {
                     $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule group=”remote desktop” new enable=yes
-                    if (!($Return.Firewall_Enabled -like "Updated*")) {
+                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*"
+                    if (!($Return.Firewall_Rules)) {
+                        $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
                         $ErrorCount = $ErrorCount + 1
                     }
                 }
@@ -114,7 +116,9 @@ try {
         (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(0) | Out-Null
                 if (Assert-FirewallConfigurable) {
                     $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule group=”remote desktop” new enable=yes
-                    if (!($Return.Firewall_Enabled -like "Updated*")) {
+                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*"
+                    if (!($Return.Firewall_Rules)) {
+                        $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
                         $ErrorCount = $ErrorCount + 1
                     }
                 }
