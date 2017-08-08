@@ -41,7 +41,7 @@ Write-Host " "
 
 # Check if NuGet is registered as a package provider and install it if it is not
 try {
-    $NuGet = Get-PackageProvider | Where-Object Name -EQ NuGet
+    $NuGet = Get-PackageProvider -WarningAction 'SilentlyContinue' | Where-Object Name -EQ NuGet
         if (! $NuGet) {
             Write-Host 'NuGet not installed - Fixing'
             $Return.NuGet = Install-PackageProvider -Name NuGet -Force -Verbose 4>&1

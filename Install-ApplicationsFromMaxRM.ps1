@@ -282,7 +282,6 @@ If ($Uninstall) {
 	
 	# Loop through copy of hashtable keys, updating hashtable if necessary
 	Foreach ($InstalledPackage in $Packagelist) {
-		$ErrorActionPreference = 'Stop'
 		Try {
 			If ($Packages -notcontains $InstalledPackage) {
 				. $Choco uninstall -y $InstalledPackage
@@ -290,7 +289,6 @@ If ($Uninstall) {
 			$settings['CHOCOLATEY'].Remove($Package)
 			Out-IniFile $settings $inifile 
 		} Catch {
-			$ErrorActionPreference = 'Continue'
 			$PackageReturn = "Uninstall_Failure_" + $Package
 			$Return.$PackageReturn = $_.Exception | Format-List | Out-String
 		}
@@ -320,14 +318,14 @@ Foreach ($Package in $Packages) {
 
 Write-Host 'Updating All'
 Try {
-	$Return.CUP = . $choco upgrade all -yr --no-progress
+	$Return.CUP = . $choco upgrade all -yr --no-progress | Out-String
 } Catch {
 	$Return.CUP_Error = $_.Exception | Format-List | Out-String
 }
 	Write-Host ('Installing packages {0}' -f $InstallPackages)
 If ($InstallPackages.Count -gt 0) {	
 	Try {
-		$Return.cint = . $choco install -yr --no-progress @InstallPackages
+		$Return.cint = . $choco install -yr --no-progress @InstallPackages | Out-String
 	} Catch {
 		$Return.Package_Install_Error = $_.Exception | Format-List | Out-String
 		$ErrorCount = $ErrorCount + 1
@@ -344,7 +342,7 @@ Troubleshooting info below
 _______________________________
  
 "@
-	$Return | Format-List
+	$Return | Format-List | Out-String
 	if (Test-Path $ErrorFile) {
 		Remove-Item $ErrorFile
 	}
