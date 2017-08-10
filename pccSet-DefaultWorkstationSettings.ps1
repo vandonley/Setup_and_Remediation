@@ -96,7 +96,7 @@ try {
                     $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
                     $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
                     $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*"
+                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*" | Format-List | Out-String
                     if (!($Return.Firewall_Rules)) {
                         $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
                         $ErrorCount = $ErrorCount + 1
@@ -120,7 +120,7 @@ try {
                     $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
                     $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
                     $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*"
+                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*" | Format-List | Out-String
                     if (!($Return.Firewall_Rules)) {
                         $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
                         $ErrorCount = $ErrorCount + 1
