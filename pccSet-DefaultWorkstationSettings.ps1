@@ -93,9 +93,9 @@ try {
         Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '0'
         (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
                 if (Assert-FirewallConfigurable) {
-                    $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
+                    $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
+                    $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
+                    $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
                     $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*"
                     if (!($Return.Firewall_Rules)) {
                         $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
@@ -117,9 +117,9 @@ try {
         Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '0'
         (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(0) | Out-Null
                 if (Assert-FirewallConfigurable) {
-                    $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
+                    $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
+                    $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
+                    $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
                     $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*"
                     if (!($Return.Firewall_Rules)) {
                         $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
