@@ -27,8 +27,8 @@ Next
 WScript.Echo strRequest
 WScript.Echo " SetBiosSetting: " + strReturn
 
-If strReturn <> "Success" Then
-    WScript.Quit
+If strReturn = "Success" Then
+    WScript.Quit 0
 End If
 
 Set colItems = objWMIService.ExecQuery("Select * from Lenovo_SaveBiosSettings")
