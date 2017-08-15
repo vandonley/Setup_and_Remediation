@@ -52,6 +52,12 @@ Write-Host " "
 # Create hashtable for output
 [hashtable]$Return = @{}
 
+# Array of desktop shortcuts to look for
+[array]$IconCleanup = @(
+	'Boxstarter Shell.lnk',
+	'Acrobat Reader DC.lnk'
+)
+
 # Start an error counter so MaxRM will correctly error on failure
 [int]$ErrorCount = '0'
 
@@ -329,6 +335,14 @@ If ($InstallPackages.Count -gt 0) {
 	} Catch {
 		$Return.Package_Install_Error = $_.Exception | Format-List | Out-String
 		$ErrorCount = $ErrorCount + 1
+	}
+}
+
+# Remove any unwanted desktop shortcuts if they exist.
+$DesktopPath = [System.Environment]::GetFolderPath("CommonDesktopDirectory")
+foreach ($item in $IconCleanup) {
+	if (Test-Path $DesktopPath\$item) {
+		$Return.Remove_$item = Remove-Item $DesktopPath\$item
 	}
 }
 
