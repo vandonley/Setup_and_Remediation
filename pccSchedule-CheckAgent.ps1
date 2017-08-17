@@ -52,7 +52,7 @@ $TaskNm = "Parsec - Check MSP Agent"
 $TaskFile = "$StagingPath\pccCheck-RMMAgent.ps1"
 $TaskCommand = "powershell.exe -ExecutionPolicy bypass -NonInteractive $TaskFile"
 $TaskRunAs = "System"
-$TaskPS1 = @"
+$TaskPS1 = @'
 <#
 --------------------------
 Check Advanced Monitoring Agent service and try to fix if needed.
@@ -114,7 +114,7 @@ Attempting to repair $AgentName service now.
 $AgentName is $AgentResultStart
 $Agentname is $AgentResultRunning
 -----------------------------------------------------
-`"@
+"@
         $ErrorCount = $ErrorCount + 1
 		
         # Write a warning to the event log to track restart and failure if unsuccessfull
@@ -137,7 +137,7 @@ else {
     $Output | Format-List -Force
     Exit 1
 }
-"@
+'@
 
 # Check if the Powershell file exists and create it if needed
 if (! (Test-Path -Path $TaskFile)) {
