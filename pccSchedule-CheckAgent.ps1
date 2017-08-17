@@ -44,14 +44,14 @@ Write-Host " "
 
 # List of files and folders to check for and create they don't exist
 $ErrorPath = $env:RMMErrorFolder
-$StagingPath = $env:RMMFolder + "\Staging"
-$ErrorFile = $ErrorPath + "\pccScedule-CheckAgent.txt"
+$StagingPath = "$env:RMMFolder\Staging"
+$ErrorFile = "$ErrorPath\pccScedule-CheckAgent.txt"
 
 # Files and options for the scheduled job
 $TaskNm = "Parsec - Check MSP Agent"
-$TaskCommand = "powershell -NoLogo -Noninteractive -ExecutionPolicy bypass -File " + $TaskFile
+$TaskCommand = "powershell.exe -Noninteractive $TaskFile"
 $TaskRunAs = "System"
-$TaskFile = $StagingPath + "\pccCheck-RMMAgent.ps1"
+$TaskFile = "$StagingPath\pccCheck-RMMAgent.ps1"
 $TaskPS1 = @"
 <#
 --------------------------
