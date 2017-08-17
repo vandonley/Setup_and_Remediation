@@ -342,7 +342,7 @@ If ($InstallPackages.Count -gt 0) {
 $DesktopPath = [System.Environment]::GetFolderPath("CommonDesktopDirectory")
 foreach ($item in $IconCleanup) {
 	if (Test-Path $DesktopPath\$item) {
-		$Return.Remove_$item = Remove-Item $DesktopPath\$item
+		$Return.Remove_($item) = Remove-Item $DesktopPath\$item
 	}
 }
 
