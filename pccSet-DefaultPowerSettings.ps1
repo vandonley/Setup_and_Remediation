@@ -56,7 +56,7 @@ $ErrorFile = $env:RMMErrorFolder + "\pccSet-DefaultPowerSettings.txt"
 try {
     if (! (($ComputerType -eq 'Desktop') -or ($ComputerType -eq 'Laptop'))) {
         $Return.WMI_Result = Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType
-        if ($Return.WMI_Result -ne '2') {
+        if ($Return.WMI_Result.PCSystemType -ne '2') {
             $ComputerType = 'Desktop'
         }
         else {
