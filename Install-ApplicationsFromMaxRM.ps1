@@ -322,20 +322,21 @@ Foreach ($Package in $Packages) {
 	}
 }
 
+Write-Host ('Installing packages {0}' -f $InstallPackages)
+If ($InstallPackages.Count -gt 0) {	
+	Try {
+		$Return.cinst = . $choco install -yr --no-progress @InstallPackages | Out-String
+	} Catch {
+		$Return.Package_Install_Error = $_.Exception | Format-List | Out-String
+		$ErrorCount = $ErrorCount + 1
+	}
+}
+
 Write-Host 'Updating All'
 Try {
 	$Return.CUP = . $choco upgrade all -yr --no-progress | Out-String
 } Catch {
 	$Return.CUP_Error = $_.Exception | Format-List | Out-String
-}
-	Write-Host ('Installing packages {0}' -f $InstallPackages)
-If ($InstallPackages.Count -gt 0) {	
-	Try {
-		$Return.cint = . $choco install -yr --no-progress @InstallPackages | Out-String
-	} Catch {
-		$Return.Package_Install_Error = $_.Exception | Format-List | Out-String
-		$ErrorCount = $ErrorCount + 1
-	}
 }
 
 # Remove any unwanted desktop shortcuts if they exist.
