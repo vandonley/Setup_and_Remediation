@@ -49,9 +49,9 @@ $ErrorFile = "$ErrorPath\pccScedule-CheckAgent.txt"
 
 # Files and options for the scheduled job
 $TaskNm = "Parsec - Check MSP Agent"
-$TaskCommand = "powershell.exe -Noninteractive $TaskFile"
-$TaskRunAs = "System"
 $TaskFile = "$StagingPath\pccCheck-RMMAgent.ps1"
+$TaskCommand = "powershell.exe -ExecutionPolicy bypass -NonInteractive $TaskFile"
+$TaskRunAs = "System"
 $TaskPS1 = @"
 <#
 --------------------------
