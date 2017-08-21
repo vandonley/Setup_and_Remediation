@@ -322,6 +322,19 @@ Foreach ($Package in $Packages) {
 	}
 }
 
+# Check if an old Chocolatey is installed, some versions fail with new command line options
+$ChocoCheck = . choco
+$ChocoCheck = ($ChocoCheck -split '\n')[0]
+$ChocoCheck = $ChocoCheck -split ' v'
+$ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
+$ChocoVersion
+if ($ChocoVersion.Chocolatey -ge '0.10') {
+	Write-Host "No need to force chocolatey update"
+}
+else {
+	Write-Host "Trying to update Chocolatey"
+	. cup -y chocolatey
+}
 Write-Host ('Installing packages {0}' -f $InstallPackages)
 If ($InstallPackages.Count -gt 0) {	
 	Try {
