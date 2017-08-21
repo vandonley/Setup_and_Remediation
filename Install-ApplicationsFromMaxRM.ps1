@@ -332,6 +332,14 @@ If ($InstallPackages.Count -gt 0) {
 	}
 }
 
+# Force PowerShell install if PowerShell v3 is installed
+# Powershell 5.1 will not install with Chocolatey unless forced
+$PsVersionCheck = $PSVersionTable.PSVersion
+if ($PsVersionCheck.Major -eq 3) {
+	$Return.PSv3_Upgrade = . $choco install -yrf --no-progress powershell | Out-String
+}
+
+
 Write-Host 'Updating All'
 Try {
 	$Return.CUP = . $choco upgrade all -yr --no-progress | Out-String
