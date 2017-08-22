@@ -155,7 +155,7 @@ $Return.TaskCreate = . schtasks.exe /Create /tn $TaskNm /tr $TaskCommand /sc Hou
 
 # Make sure the job has been created and state is ready
 $Return.TaskQuery = . schtasks.exe /query /tn $TaskNm | Out-String
-if ($Return.TaskQuery -like "*Ready*") {
+if (($Return.TaskQuery -like "*Ready*") -or ($Return.TaskQuery -like "*Running*")) {
     $Return.TaskStatus = "Task found and is ready"
 }
 else {
