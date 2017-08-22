@@ -55,7 +55,8 @@ Write-Host " "
 # Array of desktop shortcuts to look for
 [array]$IconCleanup = @(
 	'Boxstarter Shell.lnk',
-	'Acrobat Reader DC.lnk'
+	'Acrobat Reader DC.lnk',
+	'BCUninstaller.lnk'
 )
 
 # Start an error counter so MaxRM will correctly error on failure
@@ -364,7 +365,7 @@ Try {
 $DesktopPath = [System.Environment]::GetFolderPath("CommonDesktopDirectory")
 foreach ($item in $IconCleanup) {
 	if (Test-Path $DesktopPath\$item) {
-		$Return.Remove_($item) = Remove-Item $DesktopPath\$item
+		$Return.Remove_($item) = Remove-Item -Path $DesktopPath\$item -Force
 	}
 }
 
