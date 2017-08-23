@@ -256,26 +256,41 @@ If (!($Settings['CHOCOLATEY'])) {
 }
 
 # Chocolatey commands
-$Choco = $env:ProgramData + "\chocolatey\bin\choco.exe"
+$Choco = $env:ProgramData + "\chocolatey\choco.exe"
 
 #Region Install Chocolatey if necessary
 If (!(Test-Path $Choco)) {
-	$Return.Chocolatey_Install = "Chocolatey not installed. Trying to install."
+	Write-Host "Chocolatey not installed. Trying to install."
 
 	Try {
-		Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
+		$Return.Chocolatey_Install = Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')) | Out-String
 	} Catch {
 		$Return.Chocolatey_Install_Catch = $_.Exception | Format-List | Out-String
 		$ErrorCount = $ErrorCount + 1
 	}
 	If (Test-Path $Choco) {
-		$Return.Chocolatey_Install = "Chocolatey is installed. Proceeding."
+		Write-Host "Chocolatey is installed. Proceeding."
 	} Else {
-		$Return.Chocolatey_Install = "ERROR: Installation succeeded, but Chocolatey still not found! Exiting."
+		Write-Host "ERROR: Installation succeeded, but Chocolatey still not found! Exiting."
 		$ErrorCount = $ErrorCount + 1
 	}
 }
 #EndRegion
+
+#Region Check if an old Chocolatey is installed, some versions fail with new command line options
+$ChocoCheck = . $choco
+$ChocoCheck = ($ChocoCheck -split '\n')[0]
+$ChocoCheck = $ChocoCheck -split ' v'
+$ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
+$ChocoVersion
+if ($ChocoVersion.Chocolatey -ge '0.10') {
+	Write-Host "No need to force chocolatey update"
+}
+else {
+	Write-Host "Trying to update Chocolatey"
+	$Return.CUP_Chocolatey = . $choco upgrade -y chocolatey | Out-String
+}
+#End Region
 
 Write-Host "Verifying package installation:"
 
@@ -323,23 +338,10 @@ Foreach ($Package in $Packages) {
 	}
 }
 
-# Check if an old Chocolatey is installed, some versions fail with new command line options
-$ChocoCheck = . $choco
-$ChocoCheck = ($ChocoCheck -split '\n')[0]
-$ChocoCheck = $ChocoCheck -split ' v'
-$ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
-$ChocoVersion
-if ($ChocoVersion.Chocolatey -ge '0.10') {
-	Write-Host "No need to force chocolatey update"
-}
-else {
-	Write-Host "Trying to update Chocolatey"
-	. $choco upgrade -y chocolatey
-}
 Write-Host ('Installing packages {0}' -f $InstallPackages)
 If ($InstallPackages.Count -gt 0) {	
 	Try {
-		$Return.cinst = . $choco install -yr --no-progress @InstallPackages | Out-String
+		$Return.Package_Install = . $choco install -yr --no-progress @InstallPackages | Out-String
 	} Catch {
 		$Return.Package_Install_Error = $_.Exception | Format-List | Out-String
 		$ErrorCount = $ErrorCount + 1
@@ -348,9 +350,14 @@ If ($InstallPackages.Count -gt 0) {
 
 # Force PowerShell install if PowerShell v3 is installed
 # Powershell 5.1 will not install with Chocolatey unless forced
+Write-Host "Check Powershell Version - Must force Powershell 3 upgrade"
 $PsVersionCheck = $PSVersionTable.PSVersion
 if ($PsVersionCheck.Major -eq 3) {
+	Write-Host "$PsVersionCheck - Attempting to upgrade"
 	$Return.PSv3_Upgrade = . $choco install -yrf --no-progress powershell | Out-String
+}
+else {
+	Write-Host "$PsVersionCheck - No need to upgrade"
 }
 
 
