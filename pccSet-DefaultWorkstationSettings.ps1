@@ -86,7 +86,7 @@ catch {
     $ErrorCount = $ErrorCount + 1
 }
 
-# Set Remote Desktop
+# Region Set Remote Desktop
 try {
     # Enable RDP access, enable NLA, and enable firewall rule
     if ($RdpPreference -eq 'NLA') {
@@ -158,8 +158,9 @@ catch {
     $Return.RDP_Preference_Catch = $_.Exception | Format-List | Out-String
     $ErrorCount = $ErrorCount + 1
 }
+# End Region
 
-# Set boot and recovery options
+# Region set boot and recovery options
 try {
     # Set boot OS list and recovery options
     $Return.BootOsTime = . bcdedit.exe /timeout 3
@@ -183,9 +184,46 @@ catch {
     $Return.Recovery_Options_Catch = $_.Exception | Format-List | Out-String
     $ErrorCount = $ErrorCount + 1
 }
+# End Region
 
+# Region Lenovo Thermal Settings
+# Hashtable and array to get settings
+$WmiThermalObjects = @{}
+$WmiThermalSettings = @()
 
+# Get all the BIOS settings that include "Better Thermal Performance" as an option
+$WmiThermalObjects = Get-WmiObject -class Lenovo_BiosSetting -namespace root\wmi | `
+    Where-Object {$_.CurrentSetting -like "*Better Thermal Performance*"}
+if ($WmiThermalObjects.Count -eq '0') {
+    $Return.Lenovo_BIOS_Present = "No Lenovo BIOS settings found"
+    }
+else {
+    $Return.Lenovo_BIOS_Present = "Lenovo BIOS found - updating"
+    # Create a list of just the setting name
+    foreach ($item in $WmiThermalObjects) {
+        $WmiThermalSettings += ($item.CurrentSetting).split(",")[0]
+    }
 
+    $Return.Settings_List = $WmiThermalSettings | Format-List | Out-String
+
+    # Set each option to "Better Thermal Performance"
+    try {
+        foreach ($item in $WmiThermalSettings) {
+            (Get-WmiObject -class Lenovo_SetBiosSetting -namespace root\wmi).SetBiosSetting("$item,Better Thermal Performance")
+            (Get-WmiObject -class Lenovo_SaveBiosSettings -namespace root\wmi).SaveBiosSettings("")
+        }    
+    }
+    catch {
+        $CatchItem = "Settings_Catch_" + $item
+        $Return.$CatchItem = $_.Exception | Format-List | Out-String
+        $ErrorCount = $ErrorCount + '1'
+    }
+
+    $Return.BIOS_Settings = Get-WmiObject -class Lenovo_BiosSetting -namespace root\wmi | `
+        Where-Object {$_.CurrentSetting.split(",",[StringSplitOptions]::RemoveEmptyEntries) -like "*Better Thermal Performance*"} | `
+            Format-List CurrentSetting | Out-String
+    }
+# End Region
 
 # Check for errors and create an error file for the dashboard if needed
 $Return.Error_Count = $ErrorCount
