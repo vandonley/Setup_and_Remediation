@@ -256,7 +256,7 @@ If (!($Settings['CHOCOLATEY'])) {
 }
 
 # Chocolatey commands
-$Choco = $env:ProgramData + "\chocolatey\choco.exe"
+$Choco = $env:ProgramData + "\chocolatey\bin\choco.exe"
 
 #Region Install Chocolatey if necessary
 If (!(Test-Path $Choco)) {
@@ -275,22 +275,38 @@ If (!(Test-Path $Choco)) {
 		$ErrorCount = $ErrorCount + 1
 	}
 }
-#EndRegion
+# End Region
 
-#Region Check if an old Chocolatey is installed, some versions fail with new command line options
+# Region Old Chocolatey Upgrade
 $ChocoCheck = . $choco
 $ChocoCheck = ($ChocoCheck -split '\n')[0]
 $ChocoCheck = $ChocoCheck -split ' v'
 $ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
 $ChocoVersion
-if ($ChocoVersion.Chocolatey -ge '0.10') {
+if ($ChocoVersion.Chocolatey -ge '0.10.7') {
 	Write-Host "No need to force chocolatey update"
 }
 else {
 	Write-Host "Trying to update Chocolatey"
-	$Return.CUP_Chocolatey = . $choco upgrade -y chocolatey | Out-String
+	$Return.CUP_Chocolatey = . $choco upgrade -yf chocolatey | Out-String
 }
-#End Region
+# End Region
+
+# Region Get Chocolatey in Path
+# Check if Chocolatey is in the system path and add it if it is missing
+$ChocoPath = $env:ProgramData + "\chocolatey\bin"
+if (!($env:Path -like "*$ChocoPath*")) {
+	Write-Host "Adding Chocolatey to env:Path"
+	$NewPath = $Path + ";" + $ChocoPath
+	Return.Chocolatey_Path = Set-ItemProperty `
+		-Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH –Value $NewPath
+}
+
+else {
+	$Return.Chocolatey_Path = "Chocolatey found in env:Path"
+}
+
+# End Region
 
 Write-Host "Verifying package installation:"
 
