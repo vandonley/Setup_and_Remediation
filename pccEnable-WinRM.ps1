@@ -41,6 +41,7 @@ function Test-PsRemoting
 # Hashtable for return from function
 
 [HASHTABLE]$Return = @{}
+[int]$ErrorCount = 0
 
 
 
@@ -57,13 +58,15 @@ try {
             $Return.ExecutionPolicy_Begin = $CurrentPolicy
                 if ($CurrentPolicy -eq 'Restricted') {
                     Set-ItemProperty -Path $item -Name ExecutionPolicy -Value 'RemoteSigned' -Force
+                    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
                     $Return.ExecutionPolicy_End = "Attempting to set to RemoteSigned"
                 }
         }
     }
 }
 catch {
-    $_.Exception | Format-List -Force
+    $Return.Registry_Catch = $_.Exception | Format-List | Out-String
+    $ErrorCount = $ErrorCount + 1
 }
 
 # Build Enable-WinRM command line - under version 3 does not all skip network check
@@ -92,12 +95,16 @@ $Return.PSExePolicy = (get-itemproperty -Path $RegistryPaths[0] -Name ExecutionP
             else { $Return.RMServiceStatus = (Get-Service winrm).Status }
         }
 
-    catch [EXCEPTION] { $_.Exception | Format-List -Force }
+    catch [EXCEPTION] { 
+        $Return.WinRM_Catch = $_.Exception | Format-List | Out-String
+        $ErrorCount = $ErrorCount + 1
+    }
 
 # Return results from function. Exit with error if not in correct state.
 
-    if ( $Return.RMServiceStatus -ne 'Running' -or $Return.PSExePolicy -eq 'Restricted' )
+    if ( $Return.RMServiceStatus -ne 'Running' -or $Return.PSExePolicy -eq 'Restricted' -or $ErrorCount -gt '0' )
         {
+        $Return.Error_Count = $ErrorCount    
         $Error.Clear()
         [string]$ErrorString = "Check Failure"
         [string]$ErrMessage = ( $Return | Format-List | Out-String )
@@ -106,5 +113,12 @@ $Return.PSExePolicy = (get-itemproperty -Path $RegistryPaths[0] -Name ExecutionP
         Exit 1001
         }
         
-Return ( $Return | Format-List )
+Write-Output @"
+  
+Script Success!
+Troubleshooting info below
+_______________________________
+ 
+"@
+$Return | Format-List | Out-String
 Exit 0
