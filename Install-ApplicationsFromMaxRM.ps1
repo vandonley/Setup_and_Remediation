@@ -300,11 +300,11 @@ $CurrentPath = (Get-ItemProperty -Path $RegistryPath -Name PATH).Path
 if (!($CurrentPath -like "*$ChocoPath*")) {
 	$NewPath = $CurrentPath + ";" + $ChocoPath
 	Set-ItemProperty -Path $RegistryPath -Name PATH -Value $NewPath -Force
-	Return.Chocolatey_Path = Write-Host 'Adding Chocolatey to env:Path`n '
+	Return.Chocolatey_Path = Write-Host 'Adding Chocolatey to env:Path'
 }
 
 else {
-	$Return.Chocolatey_Path = 'Chocolatey found in env:Path`n '
+	$Return.Chocolatey_Path = 'Chocolatey found in env:Path'
 }
 
 # End Region
