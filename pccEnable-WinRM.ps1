@@ -2,8 +2,7 @@
 --------------------------
 Check if Remote Management is enabled.
 Parsec Computer Corp.
-Created:  Van Donley - 04/18/2017
-Last Updated:  Van Donely - 04/21/2017
+Created:  Van Donley
 --------------------------
 #>
 
@@ -43,10 +42,35 @@ function Test-PsRemoting
 
 [HASHTABLE]$Return = @{}
 
+
+
+# Get execution policy from the registry, the agent lies....
+# If execution policy is 'Restricted', set it to RemoteSigned
+try {
+    $RegistryPaths = @(
+        "Registry::HKLM\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell",
+        "Registry::HKLM\SOFTWARE\WOW6432Node\Microsoft\PowerShell\1\ShellIds\ScriptedDiagnostics"
+    )
+    foreach ($item in $RegistryPaths) {
+        if ((Test-Path $item) -eq $true) {
+            $CurrentPolicy = (get-itemproperty -Path $item -Name ExecutionPolicy).ExecutionPolicy
+            $Return.ExecutionPolicy_Begin = $CurrentPolicy
+                if ($CurrentPolicy -eq 'Restricted') {
+                    Set-ItemProperty -Path $item -Name ExecutionPolicy -Value 'RemoteSigned' -Force
+                    $Return.ExecutionPolicy_End = "Attempting to set to RemoteSigned"
+                }
+        }
+    }
+}
+catch {
+    $_.Exception | Format-List -Force
+}
+
+
 # Checks
 
 $WinRMService = Test-PsRemoting
-$PSExePolicy = Get-ExecutionPolicy
+$Return.PSExePolicy = (get-itemproperty -Path $RegistryPaths[0] -Name ExecutionPolicy).ExecutionPolicy
 
 # Check if the WinRM service is running. If not, run Enable-PSRemoting.
 
@@ -54,8 +78,7 @@ $PSExePolicy = Get-ExecutionPolicy
         if ( $WinRMService -eq $false )
             {
             $Return.RMServiceStatusBegin = (Get-Service winrm).Status
-            $Return.EnableWinRMOut = Enable-PSRemoting -Force -SkipNetworkProfileCheck `
-                -ErrorAction Continue -WarningAction Continue
+            $Return.EnableWinRMOut = Enable-PSRemoting -Force -SkipNetworkProfileCheck
             $Return.RMServiceStatus = (Get-Service winrm).Status
             }
 
@@ -64,25 +87,9 @@ $PSExePolicy = Get-ExecutionPolicy
 
     catch [EXCEPTION] { $_.Exception | Format-List -Force }
 
-# Check to see if the Powershell execution policy is set to unrestricted and change if needed.
-
-    try {
-        if ( $PSExePolicy -ne 'RemoteSigned' )
-            {
-            $Return.PSExePolicyBegin = $PSExePolicy
-            $Return.PSExePolicyOut = Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force `
-                -ErrorAction Continue -WarningAction Continue
-            $Return.PSExePolicy = Get-ExecutionPolicy
-            }
-
-            else { $Return.PSExePolicy = $PSExePolicy }
-        }
-
-    catch [EXCEPTION] { $_.Exception | Format-List -Force }
-
 # Return results from function. Exit with error if not in correct state.
 
-    if ( $Return.RMServiceStatus -ne 'Running' -or $Return.PSExePolicy -ne 'RemoteSigned' )
+    if ( $Return.RMServiceStatus -ne 'Running' -or $Return.PSExePolicy -eq 'Restricted' )
         {
         $Error.Clear()
         [string]$ErrorString = "Check Failure"
