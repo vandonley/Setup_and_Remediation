@@ -49,6 +49,11 @@ $WarningPreference = "Continue"
 # Force output to keep MaxRM from timing out
 Write-Host ' '
 
+# Make sure execution policy is not 'Restricted'
+if (Get-ExecutionPolicy -eq 'Restricted') {
+	Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
+}
+
 # Create hashtable for output
 [hashtable]$Return = @{}
 
