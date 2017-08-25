@@ -50,7 +50,7 @@ $WarningPreference = "Continue"
 Write-Host ' '
 
 # Make sure execution policy is not 'Restricted'
-if (Get-ExecutionPolicy -eq 'Restricted') {
+if ((Get-ExecutionPolicy) -eq 'Restricted') {
 	Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
 }
 
