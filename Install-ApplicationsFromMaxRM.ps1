@@ -47,7 +47,7 @@ $ErrorActionPreference = "Continue"
 $WarningPreference = "Continue"
 
 # Force output to keep MaxRM from timing out
-Write-Host " "
+Write-Host ' '
 
 # Create hashtable for output
 [hashtable]$Return = @{}
@@ -63,7 +63,6 @@ Write-Host " "
 [int]$ErrorCount = '0'
 
 # List of folders to check for and create the folders if they don't exist
-$StagingPath = $env:RMMFolder + "\Staging"
 $ErrorFile = $env:RMMErrorFolder + "\Install-ApplicationsFromMAxRM.txt"
 
 If (-not ($Packages)) {
@@ -84,7 +83,7 @@ function Restart-MAXfocusService ([bool]$Safely=$true) {
 	Out-IniFile $settingsContent $IniFile
 		
 	# Prepare restartscript
-	$RestartScript = $StagingPath + "\RestartMAXfocusAgent.cmd"
+	$RestartScript = $env:Temp + "\RestartMAXfocusAgent.cmd"
 	$RestartScriptContent = @"
 net stop "Advanced Monitoring Agent"
 net start "Advanced Monitoring Agent"
@@ -95,7 +94,7 @@ Del /F $RestartScript
 	$JobTime = (Get-Date).AddMinutes(-2)
 	$StartTime = Get-Date $JobTime -Format HH:mm
 	$TaskName = "Restart Advanced Monitoring Agent"
-	$Result = &schtasks.exe /Create /TN $TaskName /TR "$RestartScript" /RU SYSTEM /SC ONCE /ST $StartTime /F
+	$Result = &schtasks.exe /Create /TN "$TaskName" /TR "$RestartScript" /RU SYSTEM /SC ONCE /ST $StartTime /F
 	If ($Result) {
 		Output-Debug "Restarting Agent using scheduled task now."
 		$Result = &schtasks.exe /run /TN "$TaskName"
@@ -108,8 +107,6 @@ Del /F $RestartScript
 	
 	
 }
-
-
 
 # Downloaded from 
 # http://blogs.technet.com/b/heyscriptingguy/archive/2011/08/20/use-powershell-to-work-with-any-ini-file.aspx
@@ -207,7 +204,7 @@ Foreach ($Property in (Get-Item . | Select-Object -ExpandProperty Property)) {
 	
 }
 If ($RestartNeeded) {
-	Write-Host 'Application install enviroment has been modified.'
+	Write-Host 'Agent restart required!'
 }
 Pop-Location # Return to scripts directory
 
@@ -260,7 +257,7 @@ $Choco = $env:ProgramData + "\chocolatey\bin\choco.exe"
 
 #Region Install Chocolatey if necessary
 If (!(Test-Path $Choco)) {
-	Write-Host "Chocolatey not installed. Trying to install."
+	Write-Host "Chocolatey not installed. Trying to install.`n "
 
 	Try {
 		$Return.Chocolatey_Install = Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')) | Out-String
@@ -269,7 +266,7 @@ If (!(Test-Path $Choco)) {
 		$ErrorCount = $ErrorCount + 1
 	}
 	If (Test-Path $Choco) {
-		Write-Host "Chocolatey is installed. Proceeding."
+		Write-Host "Chocolatey is installed. Proceeding.`n "
 	} Else {
 		Write-Host "ERROR: Installation succeeded, but Chocolatey still not found! Exiting."
 		$ErrorCount = $ErrorCount + 1
@@ -284,33 +281,35 @@ $ChocoCheck = ($ChocoCheck -split '\n')[0]
 $ChocoCheck = $ChocoCheck -replace '\s',''
 $ChocoCheck = $ChocoCheck -split 'v'
 $ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
+Write-Host 'Testing Chocolatey version'
 $ChocoVersion
-if ($ChocoVersion.Chocolatey -ge '10.7') {
-	Write-Host "No need to force chocolatey update"
+if ($ChocoVersion.Chocolatey -ge '0.10.7') {
+	Write-Host "No need to force chocolatey update`n "
 }
 else {
-	Write-Host "Trying to update Chocolatey"
-	$Return.CUP_Chocolatey = Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')) | Out-String
+	Write-Host "Trying to update Chocolatey`n "
+	$Return.CUP_Chocolatey = . $choco upgrade -yf chocolatey | Out-String
 }
 # End Region
 
 # Region Get Chocolatey in Path
 # Check if Chocolatey is in the system path and add it if it is missing
 $ChocoPath = $env:ProgramData + "\chocolatey\bin"
-if (!($env:Path -like "*$ChocoPath*")) {
-	Write-Host "Adding Chocolatey to env:Path"
-	$NewPath = $Path + ";" + $ChocoPath
-	Return.Chocolatey_Path = Set-ItemProperty `
-		-Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH –Value $NewPath
+$RegistryPath =  "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+$CurrentPath = (Get-ItemProperty -Path $RegistryPath -Name PATH).Path
+if (!($CurrentPath -like "*$ChocoPath*")) {
+	$NewPath = $CurrentPath + ";" + $ChocoPath
+	Set-ItemProperty -Path $RegistryPath -Name PATH -Value $NewPath -Force
+	Return.Chocolatey_Path = Write-Host 'Adding Chocolatey to env:Path`n '
 }
 
 else {
-	$Return.Chocolatey_Path = "Chocolatey found in env:Path"
+	$Return.Chocolatey_Path = 'Chocolatey found in env:Path`n '
 }
 
 # End Region
 
-Write-Host "Verifying package installation:"
+Write-Host "Verifying package installation`n "
 
 If ($Uninstall) {
 	# Make a copy of installed packages as the hashtable cannot be changed while
@@ -356,7 +355,7 @@ Foreach ($Package in $Packages) {
 	}
 }
 
-Write-Host ('Installing packages {0}' -f $InstallPackages)
+Write-Host "Installing packages $InstallPackages`n "
 If ($InstallPackages.Count -gt 0) {	
 	Try {
 		$Return.Package_Install = . $choco install -yr --no-progress @InstallPackages | Out-String
@@ -371,15 +370,15 @@ If ($InstallPackages.Count -gt 0) {
 Write-Host "Check Powershell Version - Must force Powershell 3 upgrade"
 $PsVersionCheck = $PSVersionTable.PSVersion
 if ($PsVersionCheck.Major -eq 3) {
-	Write-Host "$PsVersionCheck - Attempting to upgrade"
+	Write-Host "$PsVersionCheck - Attempting to upgrade`n "
 	$Return.PSv3_Upgrade = . $choco install -yrf --no-progress powershell | Out-String
 }
 else {
-	Write-Host "$PsVersionCheck - No need to upgrade"
+	Write-Host "$PsVersionCheck - No need to upgrade`n "
 }
 
 
-Write-Host 'Updating All'
+Write-Host "Updating all packages`n "
 Try {
 	$Return.CUP = . $choco upgrade all -yr --no-progress | Out-String
 } Catch {
