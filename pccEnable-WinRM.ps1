@@ -66,6 +66,13 @@ catch {
     $_.Exception | Format-List -Force
 }
 
+# Build Enable-WinRM command line - under version 3 does not all skip network check
+if ($PSVersionTable.PSVersion.Major -ge 3) {
+    $EnableRemoting = Enable-PSRemoting -Force -SkipNetworkProfileCheck
+}
+else {
+    $EnableRemoting = Enable-PSRemoting -Force
+}
 
 # Checks
 
@@ -78,7 +85,7 @@ $Return.PSExePolicy = (get-itemproperty -Path $RegistryPaths[0] -Name ExecutionP
         if ( $WinRMService -eq $false )
             {
             $Return.RMServiceStatusBegin = (Get-Service winrm).Status
-            $Return.EnableWinRMOut = Enable-PSRemoting -Force -SkipNetworkProfileCheck
+            $Return.EnableWinRMOut = $EnableRemoting
             $Return.RMServiceStatus = (Get-Service winrm).Status
             }
 
