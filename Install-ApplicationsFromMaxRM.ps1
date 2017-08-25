@@ -273,6 +273,7 @@ If (!(Test-Path $Choco)) {
 	} Else {
 		Write-Host "ERROR: Installation succeeded, but Chocolatey still not found! Exiting."
 		$ErrorCount = $ErrorCount + 1
+		Exit 1001
 	}
 }
 # End Region
@@ -280,15 +281,16 @@ If (!(Test-Path $Choco)) {
 # Region Old Chocolatey Upgrade
 $ChocoCheck = . $choco
 $ChocoCheck = ($ChocoCheck -split '\n')[0]
-$ChocoCheck = $ChocoCheck -split ' v'
+$ChocoCheck = $ChocoCheck -replace '\s',''
+$ChocoCheck = $ChocoCheck -split 'v'
 $ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
 $ChocoVersion
-if ($ChocoVersion.Chocolatey -ge '0.10.7') {
+if ($ChocoVersion.Chocolatey -ge '10.7') {
 	Write-Host "No need to force chocolatey update"
 }
 else {
 	Write-Host "Trying to update Chocolatey"
-	$Return.CUP_Chocolatey = . $choco upgrade -yf chocolatey | Out-String
+	$Return.CUP_Chocolatey = Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')) | Out-String
 }
 # End Region
 
