@@ -93,3 +93,4 @@ $PSExePolicy = Get-ExecutionPolicy
         }
         
 Return ( $Return | Format-List )
+Exit 0
