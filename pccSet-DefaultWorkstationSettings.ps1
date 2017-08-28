@@ -191,9 +191,16 @@ catch {
 $WmiThermalObjects = @{}
 $WmiThermalSettings = @()
 
+
 # Get all the BIOS settings that include "Better Thermal Performance" as an option
-$WmiThermalObjects = Get-WmiObject -class Lenovo_BiosSetting -namespace root\wmi | `
-    Where-Object {$_.CurrentSetting -like "*Better Thermal Performance*"}
+if ((Get-WmiObject -Class Lenovo_BiosSetting -List -Namespace 'root\wmi') -ne $null) {
+    $WmiThermalObjects = Get-WmiObject -class Lenovo_BiosSetting -Namespace 'root\wmi' | `
+        Where-Object {$_.CurrentSetting -like "*Better Thermal Performance*"}
+}
+else {
+    $WmiThermalObjects = @()
+}
+
 if ($WmiThermalObjects.Count -eq '0') {
     $Return.Lenovo_BIOS_Present = "No Lenovo BIOS settings found"
     }
