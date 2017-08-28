@@ -293,7 +293,7 @@ if ($ChocoVersion.Chocolatey -ge '0.10.7') {
 }
 else {
 	Write-Host "Trying to update Chocolatey`n "
-	$Return.CUP_Chocolatey = . $choco upgrade -yf chocolatey | Out-String
+	$Return.CUP_Chocolatey = Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')) | Out-String
 }
 # End Region
 
