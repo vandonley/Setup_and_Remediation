@@ -87,76 +87,80 @@ catch {
 }
 
 # Region Set Remote Desktop
-try {
-    # Enable RDP access, enable NLA, and enable firewall rule
-    if ($RdpPreference -eq 'NLA') {
-        Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '0'
-        (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
-                if (Assert-FirewallConfigurable) {
-                    $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*" | Format-List | Out-String
-                    if (!($Return.Firewall_Rules)) {
-                        $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
-                        $ErrorCount = $ErrorCount + 1
+# Check if Windows is a Home version, checking RDP features will cause script to error out
+$OSCheck = (Get-WmiObject Win32_OperatingSystem).Caption
+if (!($OSCheck -like '*Home*')) {
+    try {
+        # Enable RDP access, enable NLA, and enable firewall rule
+        if ($RdpPreference -eq 'NLA') {
+            Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '0'
+            (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
+                    if (Assert-FirewallConfigurable) {
+                        $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
+                        $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
+                        $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
+                        $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*" | Format-List | Out-String
+                        if (!($Return.Firewall_Rules)) {
+                            $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
+                            $ErrorCount = $ErrorCount + 1
+                        }
                     }
-                }
-        $TsEnabled = Get-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections'
-        $NlaEnbaled = (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").UserAuthenticationRequired
-        if (($TsEnabled -eq '0') -and ($NlaEnbaled -eq '1')) {
-            $Return.RDP_Settings = 'RDP enabled with Network Level Authentication'          
+            $TsEnabled = Get-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections'
+            $NlaEnbaled = (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").UserAuthenticationRequired
+            if (($TsEnabled -eq '0') -and ($NlaEnbaled -eq '1')) {
+                $Return.RDP_Settings = 'RDP enabled with Network Level Authentication'          
+            }
+            else {
+                $Return.RDP_Settings = 'RDP settings failed to apply'
+                $ErrorCount = $ErrorCount + 1
+            }
         }
-        else {
-            $Return.RDP_Settings = 'RDP settings failed to apply'
-            $ErrorCount = $ErrorCount + 1
-        }
-    }
-    # Enable RDP access, disable NLA, and enable firewall rule
-    elseif ($RdpPreference -eq 'All') {
-        Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '0'
-        (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(0) | Out-Null
-                if (Assert-FirewallConfigurable) {
-                    $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
-                    $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*" | Format-List | Out-String
-                    if (!($Return.Firewall_Rules)) {
-                        $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
-                        $ErrorCount = $ErrorCount + 1
+        # Enable RDP access, disable NLA, and enable firewall rule
+        elseif ($RdpPreference -eq 'All') {
+            Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '0'
+            (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(0) | Out-Null
+                    if (Assert-FirewallConfigurable) {
+                        $Return.Firewall_Enabled_Shadow = . Netsh advfirewall firewall set rule name="Remote Desktop - Shadow (TCP-In)" new enable=yes profile="domain,private"
+                        $Return.Firewall_Enabled_UDP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (UDP-In)" new enable=yes profile="domain,private"
+                        $Return.Firewall_Enabled_TCP = . Netsh advfirewall firewall set rule name="Remote Desktop - User Mode (TCP-In)" new enable=yes profile="domain,private"
+                        $Return.Firewall_Rules = Get-FirewallRule -Name "Remote Desktop*" | Format-List | Out-String
+                        if (!($Return.Firewall_Rules)) {
+                            $Return.Firewall_Rules = "Error:  No RDP firewall rules found"
+                            $ErrorCount = $ErrorCount + 1
+                        }
                     }
-                }
-        $TsEnabled = Get-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections'
-        $NlaEnbaled = (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").UserAuthenticationRequired
-        if (($TsEnabled -eq '0') -and ($NlaEnbaled -eq '0')) {
-            $Return.RDP_Settings = 'RDP enabled for all clients'          
+            $TsEnabled = Get-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections'
+            $NlaEnbaled = (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").UserAuthenticationRequired
+            if (($TsEnabled -eq '0') -and ($NlaEnbaled -eq '0')) {
+                $Return.RDP_Settings = 'RDP enabled for all clients'          
+            }
+            else {
+                $Return.RDP_Settings = 'RDP settings failed to apply'
+                $ErrorCount = $ErrorCount + 1
+            }
         }
+            # Disable RDP access
+        elseif ($RdpPreference -eq 'Off') {
+            Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '1'
+            $TsEnabled = Get-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections'
+            if ($TsEnabled -eq '1') {
+                $Return.RDP_Settings = 'RDP disabled'          
+            }
+            else {
+                $Return.RDP_Settings = 'RDP settings failed to apply'
+                $ErrorCount = $ErrorCount + 1
+            }
+        }
+        # Error if passed a value not defined
         else {
-            $Return.RDP_Settings = 'RDP settings failed to apply'
+            $Return.RDP_Settings = "$RDPPreference is not a valid setting. `nLeave blank or use All or Off"
             $ErrorCount = $ErrorCount + 1
         }
     }
-        # Disable RDP access
-    elseif ($RdpPreference -eq 'Off') {
-        Set-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -DWord '1'
-        $TsEnabled = Get-RegistryKeyValue -Path 'hklm:\SYSTEM\CurentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections'
-        if ($TsEnabled -eq '1') {
-            $Return.RDP_Settings = 'RDP disabled'          
-        }
-        else {
-            $Return.RDP_Settings = 'RDP settings failed to apply'
-            $ErrorCount = $ErrorCount + 1
-        }
-    }
-    # Error if passed a value not defined
-    else {
-        $Return.RDP_Settings = "$RDPPreference is not a valid setting. `nLeave blank or use All or Off"
+    catch {
+        $Return.RDP_Preference_Catch = $_.Exception | Format-List | Out-String
         $ErrorCount = $ErrorCount + 1
     }
-}
-catch {
-    $Return.RDP_Preference_Catch = $_.Exception | Format-List | Out-String
-    $ErrorCount = $ErrorCount + 1
 }
 # End Region
 
@@ -183,6 +187,9 @@ try {
 catch {
     $Return.Recovery_Options_Catch = $_.Exception | Format-List | Out-String
     $ErrorCount = $ErrorCount + 1
+}
+else {
+    $Return.RDP_Checks = 'Skipped RDP Settings, Home version of Windows Detected'
 }
 # End Region
 
