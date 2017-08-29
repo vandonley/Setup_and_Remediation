@@ -223,8 +223,8 @@ else {
     # Set each option to "Better Thermal Performance"
     try {
         foreach ($item in $WmiThermalSettings) {
-            (Get-WmiObject -class Lenovo_SetBiosSetting -namespace root\wmi).SetBiosSetting("$item,Better Thermal Performance")
-            (Get-WmiObject -class Lenovo_SaveBiosSettings -namespace root\wmi).SaveBiosSettings("")
+            (Get-WmiObject -class Lenovo_SetBiosSetting -namespace root\wmi).SetBiosSetting("$item,Better Thermal Performance") | Out-Null
+            (Get-WmiObject -class Lenovo_SaveBiosSettings -namespace root\wmi).SaveBiosSettings("") | Out-Null
         }    
     }
     catch {
