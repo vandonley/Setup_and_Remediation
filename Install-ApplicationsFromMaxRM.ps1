@@ -281,22 +281,36 @@ If (!(Test-Path $Choco)) {
 # End Region
 
 # Region Old Chocolatey Upgrade
-$ChocoCheck = . $choco
-if (($ChocoCheck. | Measure-Object -Line).Lines -gt '1') {
-	$ChocoCheck = ($ChocoCheck -split '\n')[0]
+try {
+	$ChocoCheck = . $choco
+	if (($ChocoCheck | Measure-Object -Line).Lines -gt '1') {
+		$ChocoCheck = ($ChocoCheck -split '\n')[0]
+	}
+	$ChocoCheck = $ChocoCheck -replace '\s',''
+	$ChocoCheck = $ChocoCheck -split 'v'
+	$ChocoCheck = $ChocoCheck.Split('.')
+	$ChocoCheck
+	if ($ChocoCheck.Count -lt 4) {
+		Write-Host 'Chocolatey version check failed!'
+		$Return | Format-List | Out-String
+		Exit 1001
+	}
+	$ChocoVersion = [ordered]@{'Name' = $ChocoCheck[0]; 'Major' = $ChocoCheck[1]; 'Minor' = $ChocoCheck[2]; 'Build' = $ChocoCheck[3]}
+	Write-Host 'Testing Chocolatey version'
+	$ChocoVersion
+	if (($ChocoVersion.Major -ge '1') -or (($ChocoVersion.Minor -ge '10') -and ($ChocoVersion.Build -ge '7'))) {
+		Write-Host "`nNo need to force chocolatey update`n "
+	}
+	else {
+		Write-Host "Trying to update Chocolatey`n "
+		$Return.CUP_Chocolatey = Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')) | Out-String
+	}
 }
-$ChocoCheck = $ChocoCheck -replace '\s',''
-$ChocoCheck = $ChocoCheck -split 'v'
-$ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
-Write-Host 'Testing Chocolatey version'
-$ChocoVersion
-if ($ChocoVersion.Chocolatey -ge '0.10.7') {
-	Write-Host "No need to force chocolatey update`n "
+catch {
+	$Return.Chocolatey_Update_Check = $_.Exception | Format-List | Out-String
+	$ErrorCount = $ErrorCount + 1
 }
-else {
-	Write-Host "Trying to update Chocolatey`n "
-	$Return.CUP_Chocolatey = Invoke-Expression -ErrorAction 'Stop' ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')) | Out-String
-}
+
 # End Region
 
 # Region Get Chocolatey in Path
@@ -335,8 +349,8 @@ If ($Uninstall) {
 			$settings['CHOCOLATEY'].Remove($Package)
 			Out-IniFile $settings $inifile 
 		} Catch {
-			$PackageReturn = "Uninstall_Failure_" + $Package
-			$Return.$PackageReturn = $_.Exception | Format-List | Out-String
+			$Return.Uninstall_Failure = $_.Exception | Format-List | Out-String
+			$ErrorCount = $ErrorCount + 1
 		}
 	}
 }
