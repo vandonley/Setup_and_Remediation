@@ -282,7 +282,9 @@ If (!(Test-Path $Choco)) {
 
 # Region Old Chocolatey Upgrade
 $ChocoCheck = . $choco
-$ChocoCheck = ($ChocoCheck -split '\n')[0]
+if (($ChocoCheck. | Measure-Object -Line).Lines -gt '1') {
+	$ChocoCheck = ($ChocoCheck -split '\n')[0]
+}
 $ChocoCheck = $ChocoCheck -replace '\s',''
 $ChocoCheck = $ChocoCheck -split 'v'
 $ChocoVersion = @{$ChocoCheck[0] = $ChocoCheck[1]}
