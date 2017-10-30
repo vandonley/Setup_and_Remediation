@@ -8,11 +8,14 @@
    The script is to be uploaded to your dashboard account as a user script.
    It can run both as a script check and as a scheduled task. Edit $RMM_Name to
    change the base folder name, environment variable names, and event log source name.
-   
-.EXAMPLE
+ .EXAMPLE
    vitCheck-RMMDefaults.ps1
 .OUTPUTS
    Creates folders, envent log source, environment variables and output for the dashboard.
+.NOTES
+   Some syntax is less clear to support various limitations of different versions of Powershell.
+   If the script is successfull, Powershell should be updated and all subsequent scripts can use
+   most recent syntax.
 .EMAIL
    vdonley@visionms.net
 .VERSION
