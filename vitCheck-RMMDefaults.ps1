@@ -1,6 +1,6 @@
 <#
 .Synopsis
-   Installs Chocolatey, Powershell, and Carbon if missing. Creates folders
+   Installs Chocolatey, Powershell, Boxstarter, and Carbon if missing. Creates folders
    for automation with the RMM platform. Creates environment variables to be
    used by other scripts. Creates a custom event source for the application
    log to be used by other scripts. Checks for TXT error files to trigger an alert.
@@ -42,16 +42,16 @@ $Return = New-Object System.Collections.Specialized.OrderedDictionary
 # When adding to Error_Count must divide by 1 to force it to be treated as a number
 $Return.Add("Error_Count","0")
 
+# Event source to create
+$RMMEventSource = "VisionIT"
+
 # List of folders to check for and create the folders if they don't exist
-$RMMBase = $env:SystemDrive + "\VisionIT_MSP"
+$RMMBase = $env:SystemDrive + "\" + $RMMEventSource + "_MSP"
 $ErrorPath = $RMMBase + "\Errors"
 $LogPath = $RMMBase + "\Logs"
 $ReportPath = $RMMBase + "\Reports"
 $StagingPath = $RMMBase + "\Staging"
 $AllFolders = $RMMBase,$ErrorPath,$LogPath,$ReportPath,$StagingPath
-
-# Event source to create
-$RMMEventSource = "VisionIT"
 
 # REGION Get Windows versions and Exit with error if script will not function
 try {
@@ -324,11 +324,50 @@ catch {
     $Return.Add("Carbon_Install_Catch","$myException") 
     $Return.Error_Count = $Return.Error_Count/1 + 1
 }
+# END REGION
 
+# REGION Make sure Boxstarter is installed
+try {
+    $BoxstarterInstallCheck = Get-Module -ListAvailable -Name Boxstarter.Common
+    if (!($BoxstarterInstallCheck)) {
+        $Return.Error_Count = $Return.Error_Count/1 + 1
+        $Return.Add("Boxstarter_Install_Check","Boxstarter module not found - Installing")
+        $BoxstarterInstallOut = . $choco install -yr --no-progress boxstarter | Out-String
+        $Return.Add("Boxstarter_Install_Result","$BoxstarterInstallOut")
+        $BoxstarterInstallRetest = Get-Module -ListAvailable -Name Boxstarter.Common
+        if (!($BoxstarterInstallRetest)) {
+            $Return.Error_Count = $Return.Error_Count/1 + 1
+            $Return.Add("Boxstarter_Install_Retest","Boxstarter module not found - Exiting")
+            Write-Output @"
+            
+Check Failure!
+Troubleshooting info below
+_______________________________
+
+"@
+            $Return | Format-List | Out-String
+            Exit 1001
+        }
+    }
+    else {
+        $BoxstarterVersion = $CarbonInstallCheck.Version | Out-String
+        $Return.Add("Boxstarter_Install_Check","$BoxstarterVersion")
+    }
+    # Remove All Users Desktop shortcut for Boxstarter
+    $AllUserDesktopLinks = ([environment]::GetFolderPath("CommonDesktopDirectory")) + "\*.lnk"
+    Get-ChildItem -Path  $AllUserDesktopLinks | Where-Object -Property Name -Like "*Boxstarter*" | Remove-Item -Force
+    # Remove Start Menu folder for Boxstarter
+    $AllUserStartMenuBoxstarter = ([environment]::GetFolderPath("CommonStartMenu")) + "\Programs\Boxstarter"
+    Uninstall-Directory -Path $AllUserStartMenuBoxstarter -Recurse
+}
+catch {
+    $myException = $_.Exception | Format-List | Out-String
+    $Return.Add("Boxstarter_Install_Catch","$myException") 
+    $Return.Error_Count = $Return.Error_Count/1 + 1
+}
 # END REGION
 
 # REGION Create folders if missing
-
 try {
     foreach ($item in $AllFolders) {
         Install-Directory -Path $item
