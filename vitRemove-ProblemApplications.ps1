@@ -6,9 +6,9 @@
    It can run both as a script check and as a scheduled task. Script removal
    of applications that we never want to see on a workstation.
    Intended to be used with RMM folder checks for error reporting. Will remove
-   the default applications or applications can be removed using Command line arguements.
+   the default applications or applications can be removed using command line arguments.
    Use -WMIRemovals as an array of names to look for in Win32_Product.
-   Use -ARPRemovals as a hashtable of name for key and uninstall command suffix for silent uninstall.
+   Use -ARPRemovals as a hashtable of names for key and uninstall command suffix for silent uninstall.
    Use -ChocoRemovals as an array of names to check for Chocolatey packages to remove.
 .EXAMPLE
    .\vitRemove-ProblemApplications.ps1
