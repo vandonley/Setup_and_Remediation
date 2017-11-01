@@ -84,16 +84,7 @@ catch {
 
 # REGION Make sure script can run and find everything it needs
 try {
-    # Get the path to the RMM INI file and its contents if packages are listed there
-    $RMMAgent = Get-ServiceConfiguration -name 'Advanced Monitoring Agent'
-    $RMMPath = Split-Path $RMMAgent.Path.Replace('"',"") -Parent
-    $RMMIni = $RMMPath + "\settings.ini"
-    $RMMSettings = Split-Ini -Path $RMMIni
-    if (!($RMMSettings)) {
-        $Return.Error_Count++
-        $Return.Agent_Error = "Unable to find the RMM settings.ini file"
-    }
-    # Get the path to Chocolatey and Chocolatey package list then parse the list
+        # Get the path to Chocolatey and Chocolatey package list then parse the list
     $Choco = $env:ChocolateyInstall + "\bin\choco.exe"
     $ChocoList = (. $Choco list -lo)
     $ChocoApps = @()
@@ -115,6 +106,15 @@ try {
     if (!($Packages)) {
         $Return.Error_Count++
         $Return.Packages_Test = "No packages listed, unable to run"
+    }
+    # Get the path to the RMM INI file and its contents if packages are listed there
+    $RMMAgent = Get-ServiceConfiguration -name 'Advanced Monitoring Agent'
+    $RMMPath = Split-Path $RMMAgent.Path.Replace('"',"") -Parent
+    $RMMIni = $RMMPath + "\settings.ini"
+    $RMMSettings = Split-Ini -Path $RMMIni
+    if (!($RMMSettings)) {
+        $Return.Error_Count++
+        $Return.Agent_Error = "Unable to find the RMM settings.ini file"
     }
     if ($Return.Error_Count -ge '1') {
         Write-Output @"
