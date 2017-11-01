@@ -149,7 +149,6 @@ try {
         foreach ($ARPRemoval in $ARPRemovals.GetEnumerator()) {
             # There may be more than one install that matches the name, create a list
             $ARPName = $ARPRemoval.Name
-            $ARPValue = $ARPRemoval.Value
             if ($ARPApps.DisplayName -like "*$ARPName*" ) {
                 $ARPFoundCount++
                 $ARPtoRemove = $ARPApps | Where-Object -Property 'DisplayName' -like "*$ARPName*"
