@@ -5,7 +5,7 @@
 .DESCRIPTION
    The script is to be uploaded to your dashboard account as a user script.
    It can run both as a script check and as a scheduled task. Expects to be run
-   with pccCheck-RMMFolders.ps1
+   with vitCheck-RMMDefaults.ps1
    
 .EXAMPLE
    .\vitShedule-CheckAgent.ps1
