@@ -94,7 +94,7 @@ try {
         $ChocoApps[$Package[0]]=$Package[1]
     }
     # Get the path to the RMM INI file and its contents if packages are listed there
-    $RMMAgent = Get-Service -Name 'Advanced Monitoring Agent'
+    $RMMAgent = Get-ServiceConfiguration -name 'Advanced Monitoring Agent'
     $RMMPath = Split-Path $RMMAgent.Path.Replace('"',"") -Parent
     $RMMIni = $RMMPath + "\settings.ini"
     $RMMSettings = Split-Ini -Path $RMMIni
