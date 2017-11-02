@@ -418,12 +418,15 @@ catch {
 
 # Create system variables to be used by other scripts
 try {
+    # If these do not exist, must restart agent for other scripts to use
+    $Return.Restart_Required = $false
     if ($env:RMMFolder -eq $RMMBase) {
         $Return.Add("RMM_Folder_Variable_Check","Envirionment variable found - RMMFolder = $env:RMMFolder")
     }
     else {
         $Return.Error_Count = $Return.Error_Count/1 + 1
         $Return.Add("RMM_Folder_Variable_Check","Envirionment variable missing - Creating RMMFolder = $RMMBase")
+        $Return.Restart_Required = $true
         Set-EnvironmentVariable -Name 'RMMFolder' -Value $RMMBase -ForComputer -Force
         if (!($env:RMMFolder -eq $RMMBase)) {
             $Return.Error_Count = $Return.Error_Count/1 + 1
@@ -436,10 +439,38 @@ try {
     else {
         $Return.Error_Count = $Return.Error_Count/1 + 1
         $Return.Add("RMM_Error_Folder_Variable_Check","Envirionment variable missing - Creating RMMErrorFolder = $ErrorPath")
+        $Return.Restart_Required = $true
         Set-EnvironmentVariable -Name 'RMMErrorFolder' -Value $ErrorPath -ForComputer -Force
         if (!($env:RMMErrorFolder -eq $ErrorPath)) {
             $Return.Error_Count = $Return.Error_Count/1 + 1
             $Return.Add("RMM_Error_Folder_Variable_Retest","Environment variable creation failed - RMMErrorFolder = $ErrorPath")
+        }
+    }
+    If ($Return.Restart_Required -eq $true) {
+        $Return.Environment_Check = 'Agent restart required, local system envirionment not set'
+        # Update last runtime to prevent changes too often
+        [int]$currenttime = $(get-date -UFormat %s) -replace ",","." # Handle decimal comma 
+        Set-IniEntry -Path $RMMIni -Section 'DAILYSAFETYCHECK' -Name 'RUNTIME' -Value $currenttime
+        # Clear lastcheckday to make DSC run immediately
+        Set-IniEntry -Path $RMMIni -Section 'DAILYSAFETYCHECK' -Name 'LASTCHECKDAY' -Value '0'
+        # Prepare restart script
+        $RestartScript = $env:Temp + "\RestartRMMAgent.cmd"
+        $RestartScriptContent = @"
+net stop "Advanced Monitoring Agent"
+net start "Advanced Monitoring Agent"
+Del /F $RestartScript
+"@
+        $RestartScriptContent | Out-File -Encoding OEM $RestartScript
+        # Start time in the future
+        $JobTime = (Get-Date).AddMinutes(2)
+        $StartTime = Get-Date $JobTime -Format HH:mm
+        $TaskName = "Restart Advanced Monitoring Agent"
+        $Result = &schtasks.exe /Create /TN "$TaskName" /TR "$RestartScript" /RU SYSTEM /SC ONCE /ST $StartTime /F
+        If ($Result) {
+            $Return.Agent_Restart_Easy = &schtasks.exe /run /TN "$TaskName" | Out-String
+        } 
+        If (!($Return.Agent_Restart_Easy -like 'SUCCESS:*')) {
+            $Return.Agent_Restart_Hard = Restart-Service 'Advanced Monitoring Agent' -Verbose | Out-String
         }
     }
 }
@@ -448,11 +479,9 @@ catch {
     $Return.Add("Enviornment_Variable_Catch","$myException") 
     $Return.Error_Count = $Return.Error_Count/1 + 1
 }
-
 # END REGION
 
 # REGION Check for files in the error folder
-
 # Check to see if an error files exist and write their content
 try {
     $ErrorFiles = Get-ChildItem $ErrorPath
