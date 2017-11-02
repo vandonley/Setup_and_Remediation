@@ -253,7 +253,7 @@ try {
     }  
     else {
         $Return.Error_Count++
-        $Return.Install_List = $InstallList
+        $Return.Install_List = $InstallList | Out-String
         $Return.Install_Output = . $Choco install -yr --no-progress @InstallList | Out-String
     }
 }
