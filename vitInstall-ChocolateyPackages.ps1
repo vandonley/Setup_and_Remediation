@@ -281,7 +281,8 @@ try {
     foreach ($item in $IconCleanup) {
         $itempath = $DesktopPath + "\" + $item
 	    if (Test-Path $itempath) {
-		    $Return.Remove_($item) = Remove-Item -Path $itempath -Force
+            $itemReturn = "Remove_Icon_" + $item
+		    $Return.$itemReturn = Remove-Item -Path $itempath -Force
 	    }
     }
 }
