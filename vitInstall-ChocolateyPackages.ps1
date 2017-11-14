@@ -253,7 +253,7 @@ try {
     }  
     else {
         $Return.Error_Count++
-        $Return.Install_List = $InstallList | Out-String
+        $Return.Install_List = $InstallList | Format-List | Out-String
         $Return.Install_Output = . $Choco install -yr --no-progress @InstallList | Out-String
     }
 }
@@ -281,8 +281,10 @@ try {
     foreach ($item in $IconCleanup) {
         $itempath = $DesktopPath + "\" + $item
 	    if (Test-Path $itempath) {
+            # Use $Return.Add() because it thinks Remove_Icon_ is a method
             $itemReturn = "Remove_Icon_" + $item
-		    $Return.$itemReturn = Remove-Item -Path $itempath -Force
+            $itemOutput = Remove-Item -Path $itempath -Force | Out-String
+		    $Return.Add("$itemReturn", "$itemOutput")
 	    }
     }
 }
