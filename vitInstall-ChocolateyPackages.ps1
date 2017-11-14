@@ -57,7 +57,7 @@ Write-Host ' '
     'Boxstarter Shell.lnk'
 )
 
-# Create hashtable for output. Make it stay in order and start an error counter to create an alert if needed. Divide by 1 to force integer
+# Create hashtable for output. Make it stay in order and start an error counter to create an alert if needed.
 $Return = [ordered]@{}
 $Return.Error_Count = 0
 
