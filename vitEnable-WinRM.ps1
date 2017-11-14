@@ -47,6 +47,12 @@ $Return.Add("Error_Count","0")
 # Get execution policy from the registry, the agent lies....
 # If execution policy is 'Restricted', set it to RemoteSigned
 try {
+    $myExecutionPolicy = Get-ExecutionPolicy
+    Return.Add("Get_Execution_Policy","Current policy:  $myExecutionPolicy")
+    if ($myExecutionPolicy -eq 'Restricted') {
+        $Return.Error_Count = $Return.Error_Count + 1
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
+    }
     [hashtable]$RegistryPaths = @{
         "Registry" = "Registry::HKLM\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell";
         "WoW64_Registry" = "Registry::HKLM\SOFTWARE\WOW6432Node\Microsoft\PowerShell\1\ShellIds\ScriptedDiagnostics"
