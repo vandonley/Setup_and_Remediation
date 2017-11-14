@@ -48,7 +48,7 @@ $Return.Add("Error_Count","0")
 # If execution policy is 'Restricted', set it to RemoteSigned
 try {
     $myExecutionPolicy = Get-ExecutionPolicy
-    Return.Add("Get_Execution_Policy","Current policy:  $myExecutionPolicy")
+    $Return.Add("Get_Execution_Policy","Current policy:  $myExecutionPolicy")
     if ($myExecutionPolicy -eq 'Restricted') {
         $Return.Error_Count = $Return.Error_Count + 1
         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
