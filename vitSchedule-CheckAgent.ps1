@@ -42,15 +42,18 @@ try {
     # File name for ScriptRunnter
     $Return.RMM_Script_Name = $MyInvocation.MyCommand.Name
     # Check to see if the RMM Error Folder exists. Put the Error file in %TEMP% if it doesn't.
-    if (Test-Path $env:RMMErrorFolder) {
+    $myErrorPath = $env:RMMErrorFolder
+    if ($myErrorPath) {
         $Return.Error_File = $env:RMMErrorFolder + "\" + $ErrorFileName
     }
     else {
         $Return.Error_File = $env:TEMP + "\" + $ErrorFileName
     }
     # Check if the staging folder exists and use %TEMP% if it doesn't.
-    if (Test-Path $env:RMMFolder) {
-        $Return.Staging_Path = $env:RMMFolder + "\Staging"
+    $myStagingPath = $env:RMMFolder
+    if ($myStagingPath) {
+        $myStagingPath = $myStagingPath + "\Staging"
+        $Return.Staging_Path = $myStagingPath
     }
     else {
         $Return.Staging_Path = $env:TEMP

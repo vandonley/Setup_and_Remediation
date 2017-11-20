@@ -65,7 +65,8 @@ try {
     # File name for ScriptRunnter
     $Return.RMM_Script_Name = $MyInvocation.MyCommand.Name
     # Check to see if the RMM Error Folder exists. Put the Error file in %TEMP% if it doesn't.
-    if (Test-Path $env:RMMErrorFolder) {
+    $myErrorPath = $env:RMMErrorFolder
+    if ($myErrorPath) {
         $Return.Error_File = $env:RMMErrorFolder + "\" + $ErrorFileName
     }
     else {
