@@ -11,7 +11,7 @@ if ($myProcess) {
     }
 }
 else {
-    Write-Host "Advanced.tmp and Program.tmp files not found, continueing"
+    Write-Host "Advanced.tmp and Program.tmp files not found, continuing"
 }
 
 #Does Languard 10 or 11 service exist?
