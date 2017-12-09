@@ -1,26 +1,23 @@
 <#
 .Synopsis
-   Sets workstation settings to desired settings. RDP is enabled for clients using
+   Sets workstations and server settings to desired default settings. RDP is enabled for clients using
    Network Location Authentication by default. This can be changed with -RdpPreference
    on the command line or as the first argument. Set to "All" to allow all RDP clients
    and "Off" to disable RDP.
 .DESCRIPTION
    The script is to be uploaded to your dashboard account as a user script.
    It can run both as a script check and as a scheduled task. Expects to be run
-   with pccCheck-RMMFolders.ps1
-   
+   with vitCheck-RMMDefaults.ps1
 .EXAMPLE
-   pccSet-DefaultWorkstationSettings All
+   vitSet-DefaultWorkstationSettings All
 .EXAMPLE
-   pccSet-DefaultWorkstationSettings -RdpPreference Off
+   vitSet-DefaultWorkstationSettings -RdpPreference Off
 .EXAMPLE
-   pccSet-DefaultWorkstationSettings
+   vitSet-DefaultWorkstationSettings
 .OUTPUTS
    Registry settings and error file.
 .EMAIL
-   vand@parseccomputer.com
-.VERSION
-   1.0
+   vdonley@visionms.net
 #>
 
 
@@ -43,32 +40,67 @@ $WarningPreference = "Continue"
 # Force output to keep MaxRM from timing out
 Write-Host " "
 
-# Create hashtable for output
-[hashtable]$Return = @{}
+# Create ordered dictionary for output. Start an error counter to create an alert if needed.
+$Return = [ordered]@{}
+$Return.Error_Count = 0
 
-# Start an error counter so MaxRM will correctly error on failure
-[int]$ErrorCount = '0'
-
-# List of files and folders to check for and create they don't exist
-$ErrorPath = $env:RMMErrorFolder
-$ErrorFile = $ErrorPath + "\pccSet-DefaultWorkstationSettings.txt"
-
-# Import Carbon module
+# REGION Reporting setup
 try {
-    Import-Module -Name Carbon -Force 
-    $CarbonImport = Get-Module -Name Carbon
-    if (! $CarbonImport) {
-        $Return.Carbon_Import = "Carbon module import failed"
-        $ErrorCount = $ErrorCount + 1
+    # Information about the script for reporting.
+    $ErrorFileName = "vitSet-DefaultMachineSettings.ps1.txt"
+    # File name for ScriptRunnter
+    $Return.RMM_Script_Name = $MyInvocation.MyCommand.Name
+    # Check to see if the RMM Error Folder exists. Put the Error file in %TEMP% if it doesn't.
+    $myErrorPath = $env:RMMErrorFolder
+    if ($myErrorPath) {
+        $Return.Error_File = $env:RMMErrorFolder + "\" + $ErrorFileName
     }
     else {
-        $Return.Carbon_Import = $CarbonImport | Select-Object Name,Version
+        $Return.Error_File = $env:TEMP + "\" + $ErrorFileName
     }
+}
+catch {
+    $myException = $_.Exception | Format-List | Out-String
+    $Return.File_Information_Catch = $myException 
+    $Return.Error_Count++ 
+}
+# END REGION
+
+# REGION Make sure script can run and find everything it needs
+try {
+    # Make sure Carbon module is installed
+    $CarbonInstallCheck = Get-Module -ListAvailable -Name Carbon
+    if (!($CarbonInstallCheck)) {
+        $Return.Error_Count++
+        $Return.Carbon_Test = "Unable to find Carbon module"
     }
-    catch {
-        $Return.Carbon_Import_Catch = $_.Exception | Format-List | Out-String
-        $ErrorCount = $ErrorCount + 1
+    if ($Return.Error_Count -ge '1') {
+        Write-Output @"
+        
+Script Failure!
+Troubleshooting info below
+_______________________________
+   
+"@
+        $Return | Format-List | Out-String
+        Add-Content -Path $Return.Error_File -Value "`n----------------------`n "
+        Add-Content -Path $Return.Error_File -Value (get-date) -passthru
+        Add-Content -Path $Return.Error_File -Value "`n "
+        Add-Content -Path $Return.Error_File -Value ( $Return | Format-List | Out-String )
+        Exit 1001
     }
+    else {
+        # Return success
+        $Return.Chocolatey_Test = (. $Choco)[0]
+        $Return.Carbon_Test = 'Carbon v{0}' -f $CarbonInstallCheck.Version
+    }
+}
+catch {
+    $myException = $_.Exception | Format-List | Out-String
+    $Return.Prerequisit_Catch = $myException 
+    $Return.Error_Count++ 
+}
+# END REGION
 
 # Disable Remote Assistance
 try {
@@ -89,7 +121,7 @@ catch {
 # Region Set Remote Desktop
 # Check if Windows is a Home version, checking RDP features will cause script to error out
 $OSCheck = (Get-WmiObject Win32_OperatingSystem).Caption
-if (!($OSCheck -like '*Home*')) {
+if (($OSCheck -like '*Pro*') -or ($OSCheck -like '*Server*')) {
     try {
         # Enable RDP access, enable NLA, and enable firewall rule
         if ($RdpPreference -eq 'NLA') {
