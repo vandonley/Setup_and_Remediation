@@ -140,7 +140,7 @@ _______________________________
 }
 catch {
     $myException = $_.Exception | Format-List | Out-String
-    $Return.Prerequisit_Catch = $myException 
+    $Return.Prerequisite_Catch = $myException 
     $Return.Error_Count++ 
 }
 # END REGION
