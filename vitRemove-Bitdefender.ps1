@@ -117,13 +117,13 @@ $Return.Error_Count++
 #REGION Remove Bitdefender
 try {
     # Start a Webclient
-    $WebClient = New-Object System.Net.WebClient
+    $WebClient = (New-Object System.Net.WebClient)
     # URL to uninstall tool
     $BDLink = 'https://download.bitdefender.com/business/BEST/Tools/Uninstall_Tool.exe'
     # Staging folder
     $StagingFile = $Return.Staging_Folder + '\Uninstall_Tool.exe'
     # Working folder to extract too
-    $WorkingFolder = $StagingFolder + '\BDUninstall'
+    $WorkingFolder = $Return.Staging_Folder + '\BDUninstall'
     # Uninstall tool file to run after extraction
     $WorkingFile = $WorkingFolder + '\UninstallTool.exe'
     # Download Bitdefender to the staging folder
