@@ -3,8 +3,6 @@
 Removes Bitdefender AV and cleans up left over files and registry keys
 .DESCRIPTION
 The script is to be uploaded to your dashboard account as a user script.
-It can run both as a script check and as a scheduled task. Script removal
-of applications that we never want to see on a workstation.
 Intended to be used with RMM folder checks for error reporting.
 .EXAMPLE
 .\vitRemove-Bitdefender.ps1
