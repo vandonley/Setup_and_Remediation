@@ -135,14 +135,17 @@ if ($b = 64) {
     #Clear out patchman location
     if ($ama) {
         Remove-Item -path "${env:ProgramFiles}/Advanced Monitoring Agent/patchman"
+        Remove-Item -path "${env:ProgramFiles}/Advanced Monitoring Agent/LastPatchScan.xml"
         Write-Host "${env:ProgramFiles}\Advanced Monitoring Agent\patchman\ deleted"
     }
     if ($cngfi) {
         Remove-Item -path "${env:ProgramFiles}/GFI Software/ControlNow Agent/patchman"
+        Remove-Item -path "${env:ProgramFiles}/GFI Software/ControlNow Agent/LastPatchScan.xml"
         Write-Host "${env:ProgramFiles}\GFI Software\ControlNow Agent\patchman\ deleted"
     }
     if ($cnln) {
         Remove-Item -path "${env:ProgramFiles}/LogicNow/ControlNow Agent/patchman"
+        Remove-Item -path "${env:ProgramFiles}/LogicNow/ControlNow Agent/LastPatchScan.xml"
         Write-Host "${env:ProgramFiles}\LogicNow\ControlNow Agent\patchman\ deleted"
     }
 
