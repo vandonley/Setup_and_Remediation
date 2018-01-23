@@ -5,17 +5,17 @@
 .DESCRIPTION
    The script is to be uploaded to your dashboard account as a user script.
    It can run both as a script check and as a scheduled task. Expects to be run
-   with pccCheck-RMMFolders.ps1
+   with vitCheck-RMMDefaults.ps1
 .EXAMPLE
-   pccJoin-Domain myDomain myDomain\myUser myPassword
+   vitJoin-Domain myDomain myDomain\myUser myPassword
 .EXAMPLE
-   pccJoin-Domain -Domain myDomain -User myDomain\myUser -Pass myPassword
+   vitJoin-Domain -Domain myDomain -User myDomain\myUser -Pass myPassword
 .EXAMPLE
-   pccJoin-Domain -Domain 'myDomain.local' -User myDomain\myUser -Pass myPassword
+   vitJoin-Domain -Domain 'myDomain.local' -User myDomain\myUser -Pass myPassword
 .OUTPUTS
    Computer account and error file.
 .EMAIL
-   vand@parseccomputer.com
+   vdonley@visionms.net
 .VERSION
    1.0
 #>
@@ -55,7 +55,7 @@ Write-Host " "
 
 # List of files and folders to check for and create they don't exist
 $ErrorPath = $env:RMMErrorFolder
-$ErrorFile = $ErrorPath + "\pccJoin-DomainID.txt"
+$ErrorFile = $ErrorPath + "\vitJoin-DomainID.txt"
 
 # Import Carbon module
 try {

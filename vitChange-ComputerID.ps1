@@ -8,19 +8,19 @@
 .DESCRIPTION
    The script is to be uploaded to your dashboard account as a user script.
    It can run both as a script check and as a scheduled task. Expects to be run
-   with pccCheck-RMMFolders.ps1
+   with vitCheck-RMMDefaults.ps1
 .EXAMPLE
-   pccChange-ComputerID MyNewName
+   vitChange-ComputerID MyNewName
 .EXAMPLE
-   pccChange-ComputerID MyNewName 'My New Description'
+   vitChange-ComputerID MyNewName 'My New Description'
 .EXAMPLE
-   pccChange-ComputerID MyNewName 'My New Description' domain MyDomain\MyUser MyPassword
+   vitChange-ComputerID MyNewName 'My New Description' domain MyDomain\MyUser MyPassword
 .EXAMPLE
-   pccChange-ComputerID -Name MyNewName -Description 'My New Description' -Scope domain -User MyDomain\MyUser -Pass MyPassword
+   vitChange-ComputerID -Name MyNewName -Description 'My New Description' -Scope domain -User MyDomain\MyUser -Pass MyPassword
 .OUTPUTS
    Registry settings and error file.
 .EMAIL
-   vand@parseccomputer.com
+   vdonley@visionit.net
 .VERSION
    1.0
 #>
@@ -68,7 +68,7 @@ Write-Host " "
 
 # List of files and folders to check for and create they don't exist
 $ErrorPath = $env:RMMErrorFolder
-$ErrorFile = $ErrorPath + "\pccChange-ComputerID.txt"
+$ErrorFile = $ErrorPath + "\vitChange-ComputerID.txt"
 
 # Make sure there is either a name or description change
 if ($Name -eq 'myName' -and $Description -eq 'myDescription') {
