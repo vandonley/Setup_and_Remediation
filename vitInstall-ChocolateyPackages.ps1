@@ -257,7 +257,7 @@ try {
         $Return.Install_List = $InstallList | Format-List | Out-String
         $Return.Install_Output = . $Choco install -yr --no-progress @InstallList | Out-String
         if ($Return.Install_Output -like "*adobereader (exited 1603*") {
-           $Return.Install_Output += . $Choco install -yr -n --no-progress adobereader | Out-Stringclist 
+           $Return.Install_Output += . $Choco install -yr -n --no-progress adobereader | Out-String
         }
     }
 }
