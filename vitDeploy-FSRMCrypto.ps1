@@ -1,7 +1,8 @@
 #####
 # Based on https://github.com/nexxai/CryptoBlocker
 ################################ USER CONFIGURATION ################################
-
+# Get around piping the | symbol
+[string]$Pipe = '|'
 # Names to use in FSRM
 $fileGroupName = "Ransomware File Types"
 $fileTemplateName = "Ransomware FS Template"
@@ -246,7 +247,7 @@ ForEach ($group in $fileGroups) {
     #Write-Host "Adding/replacing File Group [$($group.fileGroupName)] with monitored file [$($group.array -Join ",")].."
     Write-Host "`nFile Group [$($group.fileGroupName)] with monitored files from [$($group.array[0])] to [$($group.array[$group.array.GetUpperBound(0)])].."
 	&filescrn.exe filegroup Delete "/Filegroup:$($group.fileGroupName)" /Quiet
-    &filescrn.exe Filegroup Add "/Filegroup:$($group.fileGroupName)" "/Members:$($group.array -Join '|')" "/Nonmembers:$($Exclusions -join '|')"
+    &filescrn.exe Filegroup Add "/Filegroup:$($group.fileGroupName)" "/Members:$($group.array -Join $Pipe)" "/Nonmembers:$($Exclusions -join $Pipe)"
 }
 
 # Create File Screen Template with Notification
