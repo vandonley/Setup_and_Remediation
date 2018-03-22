@@ -231,6 +231,7 @@ serverone.key
 ssl.private.key
 WAPSPRNT.XXX
 temp.ttt
+*.one
 '@
     Set-Content -Path .\SkipList.txt -Value $emptyFile
     $Exclusions = Get-Content .\SkipList.txt | ForEach-Object { $_.Trim() }
