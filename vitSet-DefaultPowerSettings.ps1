@@ -1,8 +1,11 @@
 <#
 .Synopsis
-   Set Windows power plan to a default for either a desktop or laptop. Use -ComputerType
-   with either "Desktop" or "Laptop" to set manually. Script will attempt to determine 
-   computer type with WMI if not specified.
+   Set Windows power plan to a standard. Use -ComputerType with
+   "Desktop", "Laptop", or "Server" to set manually. Script will attempt to determine 
+   computer type with WMI if not specified. The plan version can be set as "2008" for
+   Windows 7 or Server 2008, "2012" for Windows 8 and Server 2012, or "2016" for
+   Windows 10 and Server 2016. Set sleep and hibernate time in seconds or don't specify
+   the default for that configuration
 .DESCRIPTION
    The script is to be uploaded to your dashboard account as a user script.
    It can run both as a script check and as a scheduled task. Expects to be run
@@ -10,9 +13,9 @@
 .EXAMPLE
    vitSet-DefaultPowerSettings
 .EXAMPLE
-   vitSet-DefaultPowerSettings Desktop
+   vitSet-DefaultPowerSettings Desktop 2016
 .EXAMPLE
-   vitSet-DefaultPowerSettings -ComputerType Desktop
+   vitSet-DefaultPowerSettings -ComputerType Desktop -PlanVersion 2016 -ACSleep 0 -DCSleep 0 -ACHibernate 0 -DCHibernate 0
 .OUTPUTS
    Error file if needed and sets power options
 .EMAIL
@@ -23,13 +26,46 @@
 
 
 <#
- -ComputerType can be passed as the first argument.Must accept -logfile from MaxRM.
+ -ComputerType can be passed as the first argument.
+ -Power plan version as the second argument.
+ -Must accept -logfile from MaxRM.
 #>  
 param (	
-    # User password as plain text
+    # Desktop, Laptop, or Server
     [Parameter(Mandatory=$false,Position=1)]
+    [ValidateSet("Not Detected","Desktop","Laptop","Server")]
     [string]
     $ComputerType = "Not Detected",
+
+    # Powerplan Version - 2008, 2012, or 2016
+    [Parameter(Mandatory=$false,Position=2)]
+    [ValidateSet("Not Detected","2008","2012","2016")]
+    [string]
+    $PlanVersion = "Not Detected",
+
+    # AC Sleep Timer , -1 will cause default setting for the detected type
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(-1,86400)]
+    [int]
+    $ACSleep = "-1",
+
+    # DC Sleep Timer, -1 will cause default setting for the detected type
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(-1,86400)]
+    [int]
+    $DCSleep = "-1",
+
+    # AC Hibernate Timer, -1 will cause default setting for the detected type
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(-1,86400)]
+    [int]
+    $ACHibernate = "-1",
+
+    # DC Hibernate Timer, -1 will cause default setting for the detected type
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(-1,86400)]
+    [int]
+    $DCHibernate = "-1",
 
 	# Make sure -logfile is NOT positional
 	[Parameter(Mandatory=$false)]
@@ -68,174 +104,186 @@ catch {
     $Return.Error_Count++ 
 }
 # END REGION
-
-# Use WMI to determine if the computer is a laptop or tablet if not correctly specified on the command line
+# REGION Computer type and version
+# Use WMI to determine if the computer is a server, desktop, or laptop/tablet if not correctly specified on the command line
+# Use version variable to determine power plan version if not specified on the command line
 try {
-    if (! (($ComputerType -eq 'Desktop') -or ($ComputerType -eq 'Laptop'))) {
-        $Return.WMI_Result = Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType
-        if ($Return.WMI_Result.PCSystemType -ne '2') {
-            $ComputerType = 'Desktop'
+    # Get chassis type
+    if ($ComputerType -eq "Not Detected") {
+        # Check if Server is in the caption to catch server OSes
+        $Return.WMI_OS_Result = Get-WmiObject -Class Win32_OperatingSystem -Property "Caption"
+        if ($Return.WMI_OS_Result.Caption -like "*Server*") {
+            $ComputerType = "Server"
         }
         else {
+            # Laptops and tablets will always be PCSystemType 2
+            $Return.WMI_Chassis_Result = Get-WmiObject -Class Win32_ComputerSystem -Property "PCSystemType"
+            if ($Return.WMI_Chassis_Result.PCSystemType -ne '2') {
+            $ComputerType = 'Desktop'
+            }
+            else {
             $ComputerType = 'Laptop'
+            }
         }
     }
+    # Get the OS version to get the right power plan settings
+    if ($PlanVersion -eq "Not Detected") {
+        $Return.OS_Version = [System.Environment]::OSVersion.Version
+        if ($Return.OS_Version.Major -eq "10") {
+            $PlanVersion = "2016"
+        }
+        elseif (($Return.OS_Version.Major -eq "6") -and ($Return.OS_Version.Minor -gt "1")) {
+            $PlanVersion = "2012"
+        }
+        elseif (($Return.OS_Version.Major -eq "6") -and ($Return.OS_Version.Minor -eq "1")) {
+            $PlanVersion = "2008"
+        }
+        else {
+            # Exit if we cannot determine the correct power plan
+            $Return.Error_Count = $Return.Error_Count++
+            $Return.Plan_Version = $PlanVersion
+            Write-Output @"
+    
+Script Failure!
+Troubleshooting info below
+_______________________________
+
+"@
+            $Return | Format-List | Out-String
+            Add-Content -Path $Return.Error_File -Value "`n----------------------`n "
+            Add-Content -Path $Return.Error_File -Value (get-date) -passthru
+            Add-Content -Path $Return.Error_File -Value "`n "
+            Add-Content -Path $Return.Error_File -Value ( $Return | Format-List | Out-String )
+            Exit 1001
+        }
+    
+    } 
 }
-catch [EXCEPTION] {
-    	$Return.Computer_Type = "Computer type not specified and unable to detect"
-        $Return.ComputerType_Catch = $_.Exception | Format-List | Out-String
-        $ErrorCount = $ErrorCount + 1
-    	Add-Content -Path $ErrorFile -Value "`n----------------------`n "
-	    Add-Content -Path $ErrorFile -Value (get-date) -passthru
-	    Add-Content -Path $ErrorFile -Value "`n "
-	    Add-Content -Path $ErrorFile -Value ( $Return | Format-List | Out-String )
-        $Error.Clear() | Out-Null
-            [string]$ErrorString = "Script Failure"
-            [string]$ErrMessage = ( $Return | Format-List | Out-String )
-            $Error.Add($ErrorString)
-        Write-Error -Exception $ErrorString -ErrorId 1001 -Message $ErrMessage
-	    Exit 1001
+catch {
+        $myException = $_.Exception | Format-List | Out-String
+        $Return.ComputerType_Catch = $myException
+        $Return.Error_Count++ 
 }
 finally {
+    # Get the final chassis type in the output
     $Return.Computer_Type = $ComputerType
+    # Get the final version in the output
+    $Return.Plan_Version = $PlanVersion  
 }
-
-# Set the powerplan using powercfg.exe
+# END REGION
+# REGION Set Sleep and Hibernate times
 try {
-    if ($ComputerType -eq "Desktop") {
-        Write-Host "Setting power plan to default for desktops"
-        . powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-        . powercfg -h off
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c fea3413e-7e05-4911-9a71-700331f1c294 0e796bdb-100d-47d6-a2d5-f7d2daa51f51 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c fea3413e-7e05-4911-9a71-700331f1c294 0e796bdb-100d-47d6-a2d5-f7d2daa51f51 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 14400
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 14400
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 02f815b5-a5cf-4c84-bf20-649d1f75d3d8 4c793e7d-a264-42e1-87d3-7a0d2f523ccd 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 02f815b5-a5cf-4c84-bf20-649d1f75d3d8 4c793e7d-a264-42e1-87d3-7a0d2f523ccd 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 0
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 29f6c1db-86da-48c5-9fdb-f2b67b1f44da 0
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 29f6c1db-86da-48c5-9fdb-f2b67b1f44da 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 7648efa3-dd9c-4e3e-b566-50f929386280 3
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 7648efa3-dd9c-4e3e-b566-50f929386280 3
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 96996bc0-ad50-47ec-923b-6f41874dd9eb 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 96996bc0-ad50-47ec-923b-6f41874dd9eb 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 a7066653-8d6c-40a8-910e-a1f54b84c7e5 2
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 4f971e89-eebd-4455-a8de-9e59040e7347 a7066653-8d6c-40a8-910e-a1f54b84c7e5 2
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 fbd9aa66-9553-4097-ba44-ed6e9d65eab8 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 fbd9aa66-9553-4097-ba44-ed6e9d65eab8 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 17aaa29b-8b43-4b94-aafe-35f64daaf1ee 10800
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 17aaa29b-8b43-4b94-aafe-35f64daaf1ee 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 14400
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 10800
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 aded5e82-b909-4619-9949-f5d71dac0bcb 100
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 aded5e82-b909-4619-9949-f5d71dac0bcb 75
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 f1fbfde2-a960-4165-9f88-50667911ce96 75
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 7516b95f-f776-4464-8c53-06167f40cc99 f1fbfde2-a960-4165-9f88-50667911ce96 50
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 0
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 0
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f 637ea02f-bbcb-4015-8e2c-a1c7b9c0b546 3
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f 637ea02f-bbcb-4015-8e2c-a1c7b9c0b546 3
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f 9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469 7
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f 9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469 7
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f 8183ba9a-e910-48da-8769-14ae6dc1170a 10
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f 8183ba9a-e910-48da-8769-14ae6dc1170a 10
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f bcded951-187b-4d05-bccc-f7e51960c258 1
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f bcded951-187b-4d05-bccc-f7e51960c258 1
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f d8742dcb-3e6a-4b3c-b3fe-374623cdcf06 3
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f d8742dcb-3e6a-4b3c-b3fe-374623cdcf06 3
-        . powercfg -setacvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f f3c5027d-cd16-4930-aa6b-90db844a8f00 3
-        . powercfg -setdcvalueindex 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c e73a048d-bf27-4f12-9731-8b2076e8891f f3c5027d-cd16-4930-aa6b-90db844a8f00 3
+    # -1 means the setting has not been defined on the command line
+    # AC Sleep Timer in seconds
+    if ($ACSleep -eq "-1") {
+        # Desktop AC sleep off
+        if ($ComputerType -eq "Desktop") {
+            $ACSleep = "0"
+        }
+        # Laptop AC sleep off
+        elseif ($ComputerType -eq "Laptop") {
+            $ACSleep = "0"
+        }
+        # Server AC sleep off
+        else {
+            $ACSleep = "0"
+        }
     }
-    else {
-        Write-Host "Setting power plan to default for laptops"
-        . powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e
-        . powercfg -h on
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e fea3413e-7e05-4911-9a71-700331f1c294 0e796bdb-100d-47d6-a2d5-f7d2daa51f51 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e fea3413e-7e05-4911-9a71-700331f1c294 0e796bdb-100d-47d6-a2d5-f7d2daa51f51 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 3600
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 900
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 02f815b5-a5cf-4c84-bf20-649d1f75d3d8 4c793e7d-a264-42e1-87d3-7a0d2f523ccd 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 02f815b5-a5cf-4c84-bf20-649d1f75d3d8 4c793e7d-a264-42e1-87d3-7a0d2f523ccd 0
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 2
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 29f6c1db-86da-48c5-9fdb-f2b67b1f44da 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 29f6c1db-86da-48c5-9fdb-f2b67b1f44da 1800
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 7200
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 0
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 7648efa3-dd9c-4e3e-b566-50f929386280 3
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 7648efa3-dd9c-4e3e-b566-50f929386280 3
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 96996bc0-ad50-47ec-923b-6f41874dd9eb 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 96996bc0-ad50-47ec-923b-6f41874dd9eb 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 a7066653-8d6c-40a8-910e-a1f54b84c7e5 2
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 4f971e89-eebd-4455-a8de-9e59040e7347 a7066653-8d6c-40a8-910e-a1f54b84c7e5 2
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 2
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 0
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 fbd9aa66-9553-4097-ba44-ed6e9d65eab8 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 fbd9aa66-9553-4097-ba44-ed6e9d65eab8 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 17aaa29b-8b43-4b94-aafe-35f64daaf1ee 10800
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 17aaa29b-8b43-4b94-aafe-35f64daaf1ee 1500
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 14400
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 10800
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 aded5e82-b909-4619-9949-f5d71dac0bcb 100
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 aded5e82-b909-4619-9949-f5d71dac0bcb 75
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 f1fbfde2-a960-4165-9f88-50667911ce96 75
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 7516b95f-f776-4464-8c53-06167f40cc99 f1fbfde2-a960-4165-9f88-50667911ce96 50
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f 637ea02f-bbcb-4015-8e2c-a1c7b9c0b546 2
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f 637ea02f-bbcb-4015-8e2c-a1c7b9c0b546 2
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f 9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469 7
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f 9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469 7
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f 8183ba9a-e910-48da-8769-14ae6dc1170a 10
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f 8183ba9a-e910-48da-8769-14ae6dc1170a 10
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f bcded951-187b-4d05-bccc-f7e51960c258 1
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f bcded951-187b-4d05-bccc-f7e51960c258 1
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f d8742dcb-3e6a-4b3c-b3fe-374623cdcf06 0
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f d8742dcb-3e6a-4b3c-b3fe-374623cdcf06 0
-        . powercfg -setacvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f f3c5027d-cd16-4930-aa6b-90db844a8f00 3
-        . powercfg -setdcvalueindex 381b4222-f694-41f0-9685-ff5bb260df2e e73a048d-bf27-4f12-9731-8b2076e8891f f3c5027d-cd16-4930-aa6b-90db844a8f00 3
+    # DC Sleep timer in seconds
+    if ($DCSleep -eq "-1") {
+        # Desktop DC sleep off
+        if ($ComputerType -eq "Desktop") {
+            $DCSleep = "0"
+        }
+        # Laptop DC sleep 1 hour
+        elseif ($ComputerType -eq "Laptop") {
+            $DCSleep = "3600"
+        }
+        # Server DC sleep off
+        else {
+            $DCSleep = "0"
+        }
+    }
+    # AC Hibernate timer in seconds
+    if ($ACHibernate -eq "-1") {
+        # Desktop AC Hibernate off
+        if ($ComputerType -eq "Desktop") {
+            $ACHibernate = "0"
+        }
+        # Laptop AC Hibernate off 
+        elseif ($ComputerType -eq "Laptop") {
+            $ACHibernate = "0"
+        }
+        # Server DC sleep off
+        else {
+            $ACHibernate = "0"
+        }
+    }
+    # DC Hibernate timer in seconds
+    if ($DCHibernate -eq "-1") {
+        # Desktop DC Hibernate off
+        if ($ComputerType -eq "Desktop") {
+            $DCHibernate = "0"
+        }
+        # Laptop DC Hibernate 2 hours 
+        elseif ($ComputerType -eq "Laptop") {
+            $ACHibernate = "7200"
+        }
+        # Server DC sleep off
+        else {
+            $DCHibernate = "0"
+        }
     }
 }
 catch {
-    $Return.PowerCFG_Catch = $_.Exception | Format-List | Out-String
-    $ErrorCount = $ErrorCount + 1
+    $myException = $_.Exception | Format-List | Out-String
+    $Return.Timers_Catch = $myException
+    $Return.Error_Count++
+}
+finally {
+    # Capture the timers for output
+    $Return.AC_Sleep_Time = $ACSleep
+    $Return.DC_Sleep_Time = $DCSleep
+    $Return.AC_Hibernate_Time = $ACHibernate
+    $Return.DC_Hibernate_Time = $DCHibernate
+}
+# END REGION
+# REGION Set the powerplan using powercfg.exe
+try {
+    # Enable or disable hibernate based off the timers
+    if (($ACHibernate -eq "0") -and ($DCHibernate -eq "0")) {
+        $Return.Hybernate_Off = . powercfg -h off
+    }
+    else {
+        $Return.Hybernate_On = . powercfg -h on
+    }
+    # Get the current list of power plans
+    $myPowerPlans = . powercfg -list
+    # Create the power plan if it does not exist
+    if (!($myPowerPlan -like "*381b4222-f694-41f0-9685-ff5bb260*")) {
+        # Alert if the plan does not exist
+        $Return.Error_Count++
+        if ($ComputerType -eq "Desktop") {
+            # Copy High Performance plan and rename
+            $Return.Create_Plan = . powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 5e3a46e6-ce58-4430-89ca-eb155d5daaaa
+            $Return.Rename_Plan = . powercfg -changename 5e3a46e6-ce58-4430-89ca-eb155d5daaaa "Vision PC Power Management Plan"
+        }
+        if ($ComputerType -eq "Laptop") {
+            # Copy Balanced plan and rename
+            $Return.Create_Plan = . powercfg -duplicatescheme 381b4222-f694-41f0-9685-ff5bb260df2e 5e3a46e6-ce58-4430-89ca-eb155d5dbbbb
+            $Return.Rename_Plan = . powercfg -changename 5e3a46e6-ce58-4430-89ca-eb155d5dbbbb "Vision Laptop Power Management Plan"
+        }
+        else {
+            # Copy High Performance plan and rename
+            $Return.Create_Plan = . powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 5e3a46e6-ce58-4430-89ca-eb155d5dcccc
+            $Return.Rename_Plan = . powercfg -changename 5e3a46e6-ce58-4430-89ca-eb155d5dcccc "Vision Server Power Management Plan"
+        }
+    }
+}
+catch {
+    $myException = $_.Exception | Format-List | Out-String
+    $Return.PowerCFG_Catch = $myException
+    $Return.Error_Count++
 }
 
 
