@@ -149,9 +149,9 @@ _______________________________
     # Test the Chocolatey version to see if update is needed
     [hashtable]$ChocoVersion = @{
         "Name" = $ChocoCheck[0];
-        "Major" = $ChocoCheck[1];
-        "Minor" = $ChocoCheck[2];
-        "Build" = $ChocoCheck[3]
+        "Major" = [int]$ChocoCheck[1];
+        "Minor" = [int]$ChocoCheck[2];
+        "Build" = [int]$ChocoCheck[3]
     }
 	if (($ChocoVersion.Major -ge '1') -or (($ChocoVersion.Minor -ge '10') -and ($ChocoVersion.Build -ge '7'))) {
 		$Return.Add("Chocolatey_Version_Check","Forced update not required - $ChocoReport")
