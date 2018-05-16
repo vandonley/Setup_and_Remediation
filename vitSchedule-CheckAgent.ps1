@@ -74,93 +74,93 @@ try {
     $TaskCommand = "powershell.exe -ExecutionPolicy bypass -NonInteractive $TaskFile"
     $TaskRunAs = "System"
     $TaskPS1 = @'
-    <#
-    --------------------------
-    Check RMM monitoring services and try to fix if needed.
-    Expects to be used with vitCheck-RMMDefaults.ps1
-    VisionIT
-    Created:  Van Donley - 03/25/2017
-    Last Updated:  Van Donely - 05/16/2018
-    --------------------------
-    #>
-    # Get the current status of all services
-    $myServices = Get-Service | Sort-Object -Property 'DisplayName'
+<#
+--------------------------
+Check RMM monitoring services and try to fix if needed.
+Expects to be used with vitCheck-RMMDefaults.ps1
+VisionIT
+Created:  Van Donley - 03/25/2017
+Last Updated:  Van Donely - 05/16/2018
+--------------------------
+#>
+# Get the current status of all services
+$myServices = Get-Service | Sort-Object -Property 'DisplayName'
+
+# Array of services to check for
+$RMMServices = @(
+    'Advanced Monitoring Agent',
+    'Backup Service Controller',
+    'BitDefender Endpoint',
+    'LanGuard 11',
+    'Take Control Agent'
+)
+
+#Set the event source name set by vitCheck-RMMDefaults
+$EventSourceName = "VisionIT"
+
+# Create hashtable for output
+$Output = [ordered]@{}
+
+# Start an error counter so MaxRM will correctly error on failure
+[int]$ErrorCount = '0'
+
+# Check that the services are running and fix if needed
+foreach ($myService in $myServices) {
+    # Make the properties easier to deal with  
+    $myName = $myService.DisplayName
+    $myStatus = $myService.Status
+    $myStartType = $myService.StartType
     
-    # Array of services to check for
-    $RMMServices = @(
-        'Advanced Monitoring Agent',
-        'Backup Service Controller',
-        'BitDefender Endpoint',
-        'LanGuard 11',
-        'Take Control Agent'
-    )
-    
-    #Set the event source name set by vitCheck-RMMDefaults
-    $EventSourceName = "VisionIT"
-    
-    # Create hashtable for output
-    $Output = [ordered]@{}
-    
-    # Start an error counter so MaxRM will correctly error on failure
-    [int]$ErrorCount = '0'
-    
-    # Check that the services are running and fix if needed
-    foreach ($myService in $myServices) {
-        # Make the properties easier to deal with  
-        $myName = $myService.DisplayName
-        $myStatus = $myService.Status
-        $myStartType = $myService.StartType
-        
-        # Check each RMM service name
-        foreach ($RMMService in $RMMServices) {
-            # Check the service display name agains the RMM service name
-            if ($myName -like "*$RMMService*") {
-                # If the service is running and set to automatic there is nothing to do
-                if ($myStatus -eq 'Running' -and $myStartType -eq 'Automatic') {
-                    $Output.$myName = 'Service running and set to start automatically'
+    # Check each RMM service name
+    foreach ($RMMService in $RMMServices) {
+        # Check the service display name agains the RMM service name
+        if ($myName -like "*$RMMService*") {
+            # If the service is running and set to automatic there is nothing to do
+            if ($myStatus -eq 'Running' -and $myStartType -eq 'Automatic') {
+                $Output.$myName = 'Service running and set to start automatically'
+            }
+            # If the service is not running then make sure it is set to automatic start and try to start it
+            else {
+                $ErrorCount++
+                # Start reporting on the service
+                $Output.$myName = "Error - $myName is $myStatus with $MyStartType start`n"
+                # Set to start automatically if needed
+                if ($myStartType -ne 'Automatic') {
+                    $myResult = $myService | Set-Service -StartupType 'Automatic' | Out-String
+                    $Output.$myName += "`nSetting service to Automatic`nOutput:  $myResult `n"
                 }
-                # If the service is not running then make sure it is set to automatic start and try to start it
+                # Try to start the service if needed
+                if ($myStatus -ne 'Running') {
+                    $myResult = $myService | Start-Service | Out-String
+                    $Output.$myName += "`nAttemping to start service`nOutput:  $myResult `n"
+                }
+                # Get the service status after trying to fix
+                $myResult = $myService | Get-Service
+                $myResultStatus = $myResult.Status
+                $myResultStartType = $myResult.StartType
+                $Output.$myName += "`nService is now $myResultStatus and set to $myResultStartType"
+                # Write a warning if the service is working now
+                if ($myResultStatus -eq 'Running' -and $myResultStartType -eq 'Automatic') {
+                    Write-EventLog -LogName 'Application' -Source $EventSourceName -EventId '1' -EntryType 'Warning' -Message $Output.$myName
+                }
+                # Write an error if the service is not working now
                 else {
-                    $ErrorCount++
-                    # Start reporting on the service
-                    $Output.$myName = "Error - Service is $myStatus with $MyStartType start"
-                    # Set to start automatically if needed
-                    if ($myStartType -ne 'Automatic') {
-                        $myResult = $myService | Set-Service -StartupType 'Automatic' | Out-String
-                        $Output.$myName += "`nSetting service to Automatic`n $myResult"
-                    }
-                    # Try to start the service if needed
-                    if ($myStatus -ne 'Running') {
-                        $myResult = $myService | Start-Service | Out-String
-                        $Output.$myName += "`nAttemping to start service`n $myResult"
-                    }
-                    # Get the service status after trying to fix
-                    $myResult = $myService | Get-Service
-                    $myResultStatus = $myResult.Status
-                    $myResultStartType = $myResult.StartType
-                    $Output.$myName += "`nService is now $myResultStatus and set to $myResultStartType"
-                    # Write a warning if the service is working now
-                    if ($myResultStatus -eq 'Running' -and $myResultStartType -eq 'Automatic') {
-                        Write-EventLog -LogName 'Application' -Source $EventSourceName -EventId '1' -EntryType 'Warning' -Message $Output.$myName
-                    }
-                    # Write an error if the service is not working now
-                    else {
-                        Write-EventLog -LogName 'Application' -Source $EventSourceName -EventId '1' -EntryType 'Error' -Message $Output.$myName
-                    }
+                    Write-EventLog -LogName 'Application' -Source $EventSourceName -EventId '1' -EntryType 'Error' -Message $Output.$myName
                 }
-            }          
-        }
+            }
+        }          
     }
-        # Check for errors and output
-    
-    if ($ErrorCount -eq 0) {
-        $Output | Format-List -Force
-        Exit 0
-    }
-    else {
-        $Output | Format-List -Force
-        Exit 1
-    }
+}
+    # Check for errors and output
+
+if ($ErrorCount -eq 0) {
+    $Output | Format-List -Force
+    Exit 0
+}
+else {
+    $Output | Format-List -Force
+    Exit 1
+}
 '@
 
     # Check if the Powershell file exists and create it if needed
