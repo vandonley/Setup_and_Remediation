@@ -10,7 +10,7 @@ $fileTemplateName = "Ransomware FS Template"
 # Active screening: Do not allow users to save unathorized files
 $fileTemplateType = "Active"
 # Passive screening: Allow users to save unathorized files (use for monitoring)
-#$fileTemplateType = "Passiv"
+#$fileTemplateType = "Passive"
 
 # Write the email options to the temporary file - comment out the entire block if no email notification should be set
 $EmailNotification = ''
@@ -227,6 +227,7 @@ Else
     # Update on a per server basis for one-offs
     $emptyFile = @'
 chk00000.xxx
+emalware.*
 serverone.key
 ssl.private.key
 WAPSPRNT.XXX
