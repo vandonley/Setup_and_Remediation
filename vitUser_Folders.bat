@@ -21,8 +21,9 @@ GOTO :END
 :: Create folder and set permissions if it doesn't exist
 IF NOT EXIST %myFolder% (
     MD %myFolder%
+    ICACLS %myFolder% /inheritance:e /t
     ICACLS %myFolder% /grant "%USERDOMAIN%\%USERNAME%:(OI)(CI)M"
-)
+    )
 ::
 :END
 EXIT
