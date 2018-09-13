@@ -58,7 +58,7 @@ try {
     $OSInfo = Get-WmiObject Win32_OperatingSystem | Select-Object Caption,OSArchitecture,Version
     $OSInfoReturn = $OSInfo | Format-List | Out-String
     $Return.Add("OS_Info","$OSInfoReturn")
-    if (($OSInfo.Caption -like "*Windows 7*") -or ($OSInfo.Caption -like "*Server 2008 R2") `
+    if (($OSInfo.Caption -like "*Windows 7*") -or ($OSInfo.Caption -like "*Server 2008 R2*") `
         -or ($OSInfo.Caption -like "*Windows 8.1*") -or ($OSInfo.Caption -like "*Server 2012*") `
         -or ($OSInfo.Caption -like "*Windows 10*") -or ($OSInfo.Caption -like "*Server 2016*")) {
         
