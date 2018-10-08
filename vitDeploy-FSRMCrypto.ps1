@@ -211,13 +211,35 @@ $webClient = New-Object System.Net.WebClient
 $jsonStr = $webClient.DownloadString("https://fsrm.experiant.ca/api/v1/get")
 $monitoredExtensions = @(ConvertFrom-Json20 $jsonStr | ForEach-Object { $_.filters })
 
+# Create list of exceptions of folders to not scan
+# If the filename changes, this will remove entries and also act as an exclusion list.
+Write-Host "`n####"
+Write-Host "Processing ExceptionList.."
+$myExceptionList = '.\ExceptionList.txt'
+If (Test-Path $myExceptionList)
+{
+    $Exceptions = Get-Content $myExceptionList | ForEach-Object { $_.Trim() }
+    }
+Else 
+{
+    # Folder, including all sub-folders to exclude, one per line for the defaults
+    # Update on a per server basis for one-offs
+    $emptyFile = @'
+C:\ProgramData\Managed Online Backup
+C:\Program Files\Managed Antivirus
+'@
+    Set-Content -Path $myExceptionList -Value $emptyFile
+    $Exceptions = Get-Content $myExceptionList | ForEach-Object { $_.Trim() }
+    }
+
 # Process SkipList.txt
 # These will remove entries and also act as an exclusion list.
 Write-Host "`n####"
 Write-Host "Processing SkipList.."
-If (Test-Path .\SkipList.txt)
+$mySkipList = '.\SkipList.txt'
+If (Test-Path $mySkipList)
 {
-    $Exclusions = Get-Content .\SkipList.txt | ForEach-Object { $_.Trim() }
+    $Exclusions = Get-Content $mySkipList | ForEach-Object { $_.Trim() }
     $monitoredExtensions = $monitoredExtensions | Where-Object { $Exclusions -notcontains $_ }
 
 }
@@ -234,8 +256,8 @@ WAPSPRNT.XXX
 temp.ttt
 *.one
 '@
-    Set-Content -Path .\SkipList.txt -Value $emptyFile
-    $Exclusions = Get-Content .\SkipList.txt | ForEach-Object { $_.Trim() }
+    Set-Content -Path $mySkipList -Value $emptyFile
+    $Exclusions = Get-Content $mySkipList | ForEach-Object { $_.Trim() }
     $monitoredExtensions = $monitoredExtensions | Where-Object { $Exclusions -notcontains $_ }
 }
 
@@ -250,6 +272,21 @@ ForEach ($group in $fileGroups) {
     Write-Host "`nFile Group [$($group.fileGroupName)] with monitored files from [$($group.array[0])] to [$($group.array[$group.array.GetUpperBound(0)])].."
 	&filescrn.exe filegroup Delete "/Filegroup:$($group.fileGroupName)" /Quiet
     &filescrn.exe Filegroup Add "/Filegroup:$($group.fileGroupName)" "/Members:$($group.array -Join $Pipe)" "/Nonmembers:$($Exclusions -join $Pipe)"
+}
+
+# Add filegroups to exceptions
+Write-Host "`n####"
+Write-Host "Adding/replacing File Groups to Exceptions.."
+# Build filegroups to add
+$ExceptionArgs = @()
+foreach ($group in $fileGroups) {
+    $ExceptionArgs += "/Add-FileGroup:$($group.fileGroupName)"
+    }
+# Add filegroups to each exception
+foreach ($Exception in $Exceptions) {
+    Write-Host "Modifying exception - $Exception"
+    &filescrn.exe exception delete /path:"$Exception" /quiet
+    &filescrn.exe exception add /path:"$Exception" $ExceptionArgs
 }
 
 # Create File Screen Template with Notification
