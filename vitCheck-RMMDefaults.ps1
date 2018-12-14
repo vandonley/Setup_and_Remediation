@@ -60,7 +60,8 @@ try {
     $Return.Add("OS_Info","$OSInfoReturn")
     if (($OSInfo.Caption -like "*Windows 7*") -or ($OSInfo.Caption -like "*Server 2008 R2*") `
         -or ($OSInfo.Caption -like "*Windows 8.1*") -or ($OSInfo.Caption -like "*Server 2012*") `
-        -or ($OSInfo.Caption -like "*Windows 10*") -or ($OSInfo.Caption -like "*Server 2016*")) {
+        -or ($OSInfo.Caption -like "*Windows 10*") -or ($OSInfo.Caption -like "*Server 2016*") `
+        -or ($OSInfo.Caption -like "*Server 2019*")) {
         
             $Return.Add("OS_Check","Success")   
     }
