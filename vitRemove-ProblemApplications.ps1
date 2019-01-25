@@ -14,7 +14,7 @@
    .\vitRemove-ProblemApplications.ps1
 .EXAMPLE
     .\vitRemove-ProblemApplications.ps1 `
-    -WMIRemovals Quicktime,Silverlight `
+    -WMIRemovals Quicktime `
     -ARPRemovals @{"Malwarebytes"=" /verysilent /suppressmsgboxes /norestart"} `
     -ChocoRemovals adobeshockwaveplayer
 .OUTPUTS
@@ -32,7 +32,7 @@
 param (	
     # WMI installs to remove, default if none are entered
     [Parameter(Mandatory=$false)]
-    [array]$WMIRemovals = @('Quicktime','Silverlight'),
+    [array]$WMIRemovals = @('Quicktime'),
 
     # Uninstall registry keys of programs to remove to remove, default if none are entered
     [Parameter(Mandatory=$false)]
