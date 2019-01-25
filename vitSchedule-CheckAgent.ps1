@@ -92,7 +92,7 @@ $RMMServices = @(
     'Backup Service Controller',
     'BitDefender Endpoint',
     'LanGuard 11',
-    'Take Control Agent'
+    'SolarWinds MSP'
 )
 
 #Set the event source name set by vitCheck-RMMDefaults
