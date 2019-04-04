@@ -109,6 +109,8 @@ _______________________________
     else {
         # Return success
         $Return.Carbon_Test = 'Carbon v{0}' -f $CarbonInstallCheck.Version
+        # Import Carbon module
+        Import-Module -Name 'Carbon'
     }
 }
 catch {

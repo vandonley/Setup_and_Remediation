@@ -318,6 +318,8 @@ _______________________________
     else {
         $CarbonVersion = $CarbonInstallCheck.Version
         $Return.Add("Carbon_Install_Check","Carbon module found - Carbon v$CarbonVersion")
+        # Import Carbon module
+        Import-Module -Name 'Carbon'
     }
 }
 catch {

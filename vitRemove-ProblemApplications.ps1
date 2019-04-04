@@ -82,6 +82,16 @@ catch {
 
 # REGION Get uninstall information for all applications so it doesn't query for every program.
 try {
+    # Make sure Carbon module is installed
+    $CarbonInstallCheck = Get-Module -ListAvailable -Name Carbon
+    if (!($CarbonInstallCheck)) {
+        $Return.Error_Count++
+        $Return.Carbon_Test = "Unable to find Carbon module"
+    }
+    else {
+        $Return.Carbon_Test = "Carbon module found, importing"
+        Import-Module -Name 'Carbon'
+    }
     # Retrieve the WMI installed application information
     $WMIApps = Get-WmiObject -Class Win32_Product
     # Use Carbon module to get installed application from the registry

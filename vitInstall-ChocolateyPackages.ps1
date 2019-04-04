@@ -103,6 +103,10 @@ try {
         $Return.Error_Count++
         $Return.Carbon_Test = "Unable to find Carbon module"
     }
+    else {
+        $Return.Carbon_Test = "Carbon module found, importing"
+        Import-Module -Name 'Carbon'
+    }
     # Make sure we have a package list
     if (!($Packages)) {
         $Return.Error_Count++

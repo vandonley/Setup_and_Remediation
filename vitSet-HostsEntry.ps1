@@ -79,6 +79,10 @@ try {
         $Return.Error_Count++
         $Return.Carbon_Test = "Unable to find Carbon module"
     }
+    else {
+        $Return.Carbon_Test = "Carbon module found, importing"
+        Import-Module -Name 'Carbon'
+    }
     # Create the hosts file entry if needed
     $Return.Hosts_Entry = Set-HostsEntry -IPAddress $IPAddress -HostName $HostName -Description $Description
 }
