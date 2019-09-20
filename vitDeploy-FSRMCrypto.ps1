@@ -163,7 +163,7 @@ if ($majorVer -ge 6)
         Write-Host "`n####"
         Write-Host "FSRM not found.. Installing (2012).."
 
-        $install = Install-WindowsFeature -Name FS-Resource-Manager -IncludeManagementTools
+        Install-WindowsFeature -Name FS-Resource-Manager -IncludeManagementTools
 	if ($? -ne $True)
 	{
 		Write-Host "Install of FSRM failed."
@@ -175,7 +175,7 @@ if ($majorVer -ge 6)
         # Server 2008 R2
         Write-Host "`n####"
 		Write-Host "FSRM not found.. Installing (2008 R2).."
-        $install = Add-WindowsFeature FS-FileServer, FS-Resource-Manager
+        Add-WindowsFeature FS-FileServer, FS-Resource-Manager
 	if ($? -ne $True)
 	{
 		Write-Host "Install of FSRM failed."
@@ -188,7 +188,7 @@ if ($majorVer -ge 6)
         # Server 2008
         Write-Host "`n####"
 		Write-Host "FSRM not found.. Installing (2008).."
-        $install = &servermanagercmd -Install FS-FileServer FS-Resource-Manager
+        &servermanagercmd -Install FS-FileServer FS-Resource-Manager
 	if ($? -ne $True)
 	{
 		Write-Host "Install of FSRM failed."
@@ -215,7 +215,7 @@ $monitoredExtensions = @(ConvertFrom-Json20 $jsonStr | ForEach-Object { $_.filte
 # If the filename changes, this will remove entries and also act as an exclusion list.
 Write-Host "`n####"
 Write-Host "Processing ExceptionList.."
-$myExceptionList = '.\ExceptionList.txt'
+$myExceptionList = '.\ExceptionListv2.txt'
 If (Test-Path $myExceptionList)
 {
     $Exceptions = Get-Content $myExceptionList | ForEach-Object { $_.Trim() }
@@ -225,8 +225,17 @@ Else
     # Folder, including all sub-folders to exclude, one per line for the defaults
     # Update on a per server basis for one-offs
     $emptyFile = @'
-C:\ProgramData\Managed Online Backup
+C:\Program Files\7-Zip
 C:\Program Files\Managed Antivirus
+C:\Program Files (x86)\Advanced Monitoring Agent
+C:\ProgramData\BitDefender
+C:\ProgramData\chocolatey
+C:\ProgramData\Boxstarter
+C:\ProgramData\Managed Online Backup
+C:\ProgramData\ManagedAntivirus
+C:\ProgramData\N-Able Technologies
+C:\ProgramData\SolarWinds MSP
+C:\Windows
 '@
     Set-Content -Path $myExceptionList -Value $emptyFile
     $Exceptions = Get-Content $myExceptionList | ForEach-Object { $_.Trim() }
