@@ -215,7 +215,7 @@ $monitoredExtensions = @(ConvertFrom-Json20 $jsonStr | ForEach-Object { $_.filte
 # If the filename changes, this will remove entries and also act as an exclusion list.
 Write-Host "`n####"
 Write-Host "Processing ExceptionList.."
-$myExceptionList = '.\ExceptionListv2.txt'
+$myExceptionList = '.\ExceptionListv3.txt'
 If (Test-Path $myExceptionList)
 {
     $Exceptions = Get-Content $myExceptionList | ForEach-Object { $_.Trim() }
@@ -226,6 +226,7 @@ Else
     # Update on a per server basis for one-offs
     $emptyFile = @'
 C:\Program Files\7-Zip
+C:\Program Files\Backup Manager
 C:\Program Files\Managed Antivirus
 C:\Program Files (x86)\Advanced Monitoring Agent
 C:\ProgramData\BitDefender
