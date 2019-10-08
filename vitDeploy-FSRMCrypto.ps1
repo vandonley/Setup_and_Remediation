@@ -21,7 +21,7 @@ $EmailNotification = ''
 #"Subject=Unauthorized file from the [Violated File Group] file group detected" >> $EmailNotification
 #"Message=User [Source Io Owner] attempted to save [Source File Path] to [File Screen Path] on the [Server] server. This file is in the [Violated File Group] file group, which is not permitted on the server."  >> $EmailNotification
 ## de
-#"Subject=Nicht autorisierte Datei erkannt, die mit Dateigruppe [Violated File Group] übereinstimmt" >> $EmailNotification
+#"Subject=Nicht autorisierte Datei erkannt, $die mit Dateigruppe [Violated File Group] übereinstimmt" >> $EmailNotification
 #"Message=Das System hat erkannt, dass Benutzer [Source Io Owner] versucht hat, die Datei [Source File Path] unter [File Screen Path] auf Server [Server] zu speichern. Diese Datei weist Übereinstimmungen mit der Dateigruppe [Violated File Group] auf, die auf dem System nicht zulässig ist."  >> $EmailNotification
 
 # Write the event log options to the temporary file - comment out the entire block if no event notification should be set
@@ -82,7 +82,7 @@ Function New-CBArraySplit
     # temporary workingarray, tracking the length of the items in it and future commas
     $Extensions | ForEach-Object {
 
-        if (($LengthOfStringsInWorkingArray + 1 + $_.Length) -gt 4000) 
+        if (($LengthOfStringsInWorkingArray + 1 + $_.Length) -gt 3900) 
         {   
             # Adding this item to the working array (with +1 for a comma)
             # pushes the contents past the 4Kb limit
@@ -210,6 +210,25 @@ Write-Host "Dowloading CryptoLocker file extensions list from fsrm.experiant.ca 
 $webClient = New-Object System.Net.WebClient
 $jsonStr = $webClient.DownloadString("https://fsrm.experiant.ca/api/v1/get")
 $monitoredExtensions = @(ConvertFrom-Json20 $jsonStr | ForEach-Object { $_.filters })
+
+# Filter $monitoredExtensions for entries that will cause script failures
+# List of strings that will break the script (as a regex)
+$breakingStrings = @(
+'<\*>'
+)
+#Sanitized list to contain the accepted extensions
+$sanitizedExtensions =@()
+# Process each breaking string
+foreach ($breakingString in $breakingStrings) {
+    # Check each monitored extenstion for the string using -match (this is a regex, be careful)
+    foreach ($monitoredExtension in $monitoredExtensions) {
+        if ($monitoredExtension -notmatch $breakingString) {
+            $sanitizedExtensions += $monitoredExtension
+        }
+        $monitoredExtensions = $sanitizedExtensions
+    }
+}
+
 
 # Create list of exceptions of folders to not scan
 # If the filename changes, this will remove entries and also act as an exclusion list.
