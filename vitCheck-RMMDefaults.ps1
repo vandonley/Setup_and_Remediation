@@ -335,7 +335,7 @@ try {
     if (!($BoxstarterInstallCheck)) {
         $Return.Error_Count = $Return.Error_Count/1 + 1
         $Return.Add("Boxstarter_Install_Check","Boxstarter module not found - Installing")
-        $BoxstarterInstallOut = . $choco install -yr --no-progress boxstarter | Out-String
+        $BoxstarterInstallOut = . $choco install -yrf --no-progress boxstarter boxstarter.bootstrapper boxstarter.chocolatey boxstarter.common boxstarter.hyperv boxstarter.winconfig | Out-String
         $Return.Add("Boxstarter_Install_Result","$BoxstarterInstallOut")
         $BoxstarterInstallRetest = Test-Path -Path "$env:ProgramData\Boxstarter\Boxstarter.bat"
         if (!($BoxstarterInstallRetest)) {
