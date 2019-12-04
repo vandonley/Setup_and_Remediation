@@ -265,7 +265,7 @@ C:\Windows
 # These will remove entries and also act as an exclusion list.
 Write-Host "`n####"
 Write-Host "Processing SkipList.."
-$mySkipList = '.\SkipList.txt'
+$mySkipList = '.\SkipListv2.txt'
 If (Test-Path $mySkipList)
 {
     $Exclusions = Get-Content $mySkipList | ForEach-Object { $_.Trim() }
@@ -284,6 +284,7 @@ ssl.private.key
 WAPSPRNT.XXX
 temp.ttt
 *.one
+*.adr
 '@
     Set-Content -Path $mySkipList -Value $emptyFile
     $Exclusions = Get-Content $mySkipList | ForEach-Object { $_.Trim() }
