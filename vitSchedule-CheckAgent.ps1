@@ -1,18 +1,18 @@
-﻿<#
+<#
 .Synopsis
    Checks for the existence of a scheduled job to make sure the monitoring agent
    is running and set to automatic.
 .DESCRIPTION
    The script is to be uploaded to your dashboard account as a user script.
    It can run both as a script check and as a scheduled task. Expects to be run
-   with vitCheck-RMMDefaults.ps1
+   with cotCheck-RMMDefaults.ps1
    
 .EXAMPLE
-   .\vitShedule-CheckAgent.ps1
+   .\cotShedule-CheckAgent.ps1
 .OUTPUTS
    Scheduled task, Powershell script to be run by task, and errors.
 .EMAIL
-   vdonley@visionit.net
+   van.donley@cityoftoppenish.us
 .VERSION
    1.0
 #>
@@ -38,7 +38,7 @@ $Return.Error_Count = 0
 # REGION Reporting setup
 try {
     # Information about the script for reporting.
-    $ErrorFileName = "vitSchedule-CheckAgent.txt"
+    $ErrorFileName = "cotSchedule-CheckAgent.txt"
     # File name for ScriptRunnter
     $Return.RMM_Script_Name = $MyInvocation.MyCommand.Name
     # Check to see if the RMM Error Folder exists. Put the Error file in %TEMP% if it doesn't.
@@ -66,21 +66,44 @@ catch {
 }
 # END REGION
 
+# REGION Remove Vision tasks if present
+try {
+    # Make sure Carbon module is installed
+    $CarbonInstallCheck = Get-Module -ListAvailable -Name Carbon
+    if (!($CarbonInstallCheck)) {
+        $Return.Error_Count++
+        $Return.Carbon_Test = "Unable to find Carbon module"
+    }
+    else {
+        $Return.Carbon_Test = "Carbon module found, importing"
+        Import-Module -Name 'Carbon'
+    }
+    # Brute force removing the tasks
+    Uninstall-CScheduledTask -Name "VisionIT - Check MSP Agent"
+    Uninstall-CScheduledTask -Name "VIT-Complete_Install"
+}
+catch {
+    $myException = $_.Exception | Format-List | Out-String
+    $Return.Vision_Tasks_Catch = $myException 
+    $Return.Error_Count++
+}
+# END REGION
+
 # REGION Schedule the task.
 try {
     # Files and options for the scheduled job
-    $TaskNm = "VisionIT - Check MSP Agent"
-    $TaskFile = $Return.Staging_Path + "\vitCheck-RMMAgent.ps1"
+    $TaskNm = "CoT - Check RMM Agent"
+    $TaskFile = $Return.Staging_Path + "\cotCheck-RMMAgent.ps1"
     $TaskCommand = "powershell.exe -ExecutionPolicy bypass -NonInteractive $TaskFile"
     $TaskRunAs = "System"
     $TaskPS1 = @'
 <#
 --------------------------
 Check RMM monitoring services and try to fix if needed.
-Expects to be used with vitCheck-RMMDefaults.ps1
-VisionIT
+Expects to be used with cotCheck-RMMDefaults.ps1
+van.donley@cityoftoppenish.us
 Created:  Van Donley - 03/25/2017
-Last Updated:  Van Donely - 05/16/2018
+Last Updated:  Van Donely - 05/04/2023
 --------------------------
 #>
 # Get the current status of all services
@@ -91,12 +114,17 @@ $RMMServices = @(
     'Advanced Monitoring Agent',
     'Backup Service Controller',
     'BitDefender Endpoint',
-    'LanGuard 11',
-    'SolarWinds MSP'
+    'Ecosystem Agent',
+    'File Cache Service Agent',
+    'PME Agent',
+    'Sentinel Agent',
+    'SentinelOne',
+    'SolarWinds MSP',
+    'Take Control Agent (N-able)'
 )
 
-#Set the event source name set by vitCheck-RMMDefaults
-$EventSourceName = "VisionIT"
+#Set the event source name set by cotCheck-RMMDefaults
+$EventSourceName = "CoT"
 
 # Create hashtable for output
 $Output = [ordered]@{}
